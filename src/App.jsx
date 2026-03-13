@@ -1,21 +1,21 @@
 import { useState, useRef, useEffect } from "react";
 
 // ─── STORAGE HELPERS ──────────────────────────────────────────────────────────
-const STORAGE_KEY = "cultivored_tablero_v7"; // v7 limpia la memoria corrupta
+const STORAGE_KEY = "cultivored_tablero_v8"; // v8 para la nueva estructura Kanban
 
 // ─── EDITABLE FIELD ───────────────────────────────────────────────────────────
-function EditField({ value, onChange, placeholder = "✏️ Completar...", multiline = false, bgFocused = "#fffef7", bgBlur = "#faf8f2" }) {
+function EditField({ value, onChange, placeholder = "✏️...", multiline = false, bgFocused = "#fffef7", bgBlur = "#faf8f2" }) {
   const [focused, setFocused] = useState(false);
   const base = {
     width: "100%", boxSizing: "border-box",
     background: focused ? bgFocused : bgBlur,
-    border: `1.5px dashed ${focused ? "#52B788" : "#c8c2b4"}`,
-    borderRadius: 6, padding: "6px 10px",
-    fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem",
+    border: `1.5px dashed ${focused ? "#52B788" : "transparent"}`,
+    borderRadius: 6, padding: "6px 8px",
+    fontFamily: "'DM Sans', sans-serif", fontSize: "0.8rem",
     color: value ? "#1c1c1c" : "#9a9485",
-    outline: "none", minHeight: multiline ? 52 : 32,
+    outline: "none", minHeight: multiline ? 44 : 28,
     transition: "border-color 0.2s, background 0.2s",
-    lineHeight: 1.5, resize: multiline ? "vertical" : "none",
+    lineHeight: 1.4, resize: multiline ? "vertical" : "none",
   };
   return multiline
     ? <textarea style={base} value={value} placeholder={placeholder}
@@ -51,25 +51,6 @@ function Label({ children }) {
   return <div style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "#7a7265", marginBottom: 3 }}>{children}</div>;
 }
 
-function TareaItem({ texto, onTexto, responsable, onResponsable, fecha, onFecha, done, onDone }) {
-  return (
-    <div style={{ display: "flex", gap: 10, padding: "9px 0", borderBottom: "1px solid #ede9e0", alignItems: "flex-start", opacity: done ? 0.45 : 1 }}>
-      <div onClick={() => onDone(!done)}
-        style={{ width: 20, height: 20, borderRadius: 4, border: "2px solid #52b788", background: done ? "#52b788" : "transparent", cursor: "pointer", flexShrink: 0, marginTop: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {done && <span style={{ color: "#fff", fontSize: "0.7rem" }}>✓</span>}
-      </div>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-        <EditField value={texto} onChange={onTexto} multiline placeholder="✏️ Descripción de la tarea..." />
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-          <EditField value={responsable} onChange={onResponsable} placeholder="👤 Responsable..." />
-          <EditField value={fecha} onChange={onFecha} placeholder="📅 Fecha..." />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Componente blindado contra errores de arreglos vacíos
 function CardList({ list = [], setList, placeholder, bgField = "#faf8f2" }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -99,11 +80,11 @@ const INITIAL = {
   ],
   semanaExtras: [[], [], [], []],
   tareas: [
-    { texto: "T1a — ¿Qué vamos a ofrecer a los emprendedores que se registren? (Definir Propuesta de Valor).", responsable: "Equipo", fecha: "Viernes", done: false },
-    { texto: "T1b — ¿Cómo vamos a definir el 'journey' de cada cliente? (Diseño de experiencia).", responsable: "Kevin + Moni Molano", fecha: "Taller UX", done: false },
-    { texto: "T1c — ¿Qué metodologías utilizaremos para captar nuevos emprendedores rurales?", responsable: "Equipo", fecha: "Viernes", done: false },
-    { texto: "T2 — Definir roadmap con sprints una vez definidas las propuestas de valor. (Objetivo: arrancar Fase 2 del piloto / Testear Nodo Territorial).", responsable: "Kevin", fecha: "Por definir", done: false },
-    { texto: "T3 — Definir actividades para activar los chats de CultivoRED y empezar estrategia de expectativa con la comunidad activa.", responsable: "Equipo", fecha: "Viernes", done: false },
+    { texto: "T1a — ¿Qué vamos a ofrecer a los emprendedores que se registren? (Definir Propuesta de Valor).", responsable: "Equipo", fecha: "Viernes", status: "todo" },
+    { texto: "T1b — ¿Cómo vamos a definir el 'journey' de cada cliente? (Diseño de experiencia).", responsable: "Kevin + Moni Molano", fecha: "Taller UX", status: "todo" },
+    { texto: "T1c — ¿Qué metodologías utilizaremos para captar nuevos emprendedores rurales?", responsable: "Equipo", fecha: "Viernes", status: "todo" },
+    { texto: "T2 — Definir roadmap con sprints una vez definidas las propuestas de valor.", responsable: "Kevin", fecha: "Por definir", status: "todo" },
+    { texto: "T3 — Activar chats de CultivoRED y empezar estrategia de expectativa.", responsable: "Equipo", fecha: "Viernes", status: "todo" },
   ],
   empatia: {
     piensaSiente: ["¿Cuáles son sus mayores preocupaciones?", "¿Qué aspiraciones tiene con su negocio rural?"],
@@ -133,7 +114,6 @@ const INITIAL = {
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 export default function CultivoRED() {
-  // Carga ultra-segura (Deep Merge)
   const [s, setS] = useState(() => {
     try {
       const guardado = window.localStorage.getItem(STORAGE_KEY);
@@ -154,6 +134,8 @@ export default function CultivoRED() {
   const [activeTab, setActiveTab] = useState("dashboard"); 
   const [toast, setToast] = useState(null);
   const fileRef = useRef(null);
+  
+  const [draggedItemIndex, setDraggedItemIndex] = useState(null);
 
   useEffect(() => {
     try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } 
@@ -161,19 +143,38 @@ export default function CultivoRED() {
   }, [s]);
 
   const upd = (key, val) => setS(p => ({ ...p, [key]: val }));
-  const updArr = (key, i, val) => setS(p => ({ ...p, [key]: p[key].map((e, j) => j === i ? val : e) }));
   const updObj = (key, i, field, val) => setS(p => ({ ...p, [key]: p[key].map((e, j) => j === i ? { ...e, [field]: val } : e) }));
   const updNested = (parent, key, val) => setS(p => ({ ...p, [parent]: { ...p[parent], [key]: val } }));
 
   const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3500); };
 
+  // ── LÓGICA KANBAN ──
+  const onDragStart = (e, index) => {
+    setDraggedItemIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const onDragOver = (e) => {
+    e.preventDefault(); 
+  };
+
+  const onDrop = (e, statusDestino) => {
+    e.preventDefault();
+    if (draggedItemIndex === null) return;
+    
+    const nuevasTareas = [...s.tareas];
+    nuevasTareas[draggedItemIndex].status = statusDestino;
+    upd("tareas", nuevasTareas);
+    setDraggedItemIndex(null);
+  };
+
   const exportar = () => {
     try {
-      const payload = JSON.stringify({ _version: "v7", _fecha: new Date().toISOString(), ...s }, null, 2);
+      const payload = JSON.stringify({ _version: "v8", _fecha: new Date().toISOString(), ...s }, null, 2);
       const blob = new Blob([payload], { type: "application/json;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = url; link.download = `cultivored-v7-${new Date().toISOString().slice(0, 10)}.json`;
+      link.href = url; link.download = `cultivored-v8-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(link); link.click(); document.body.removeChild(link);
       showToast("✅ Tablero exportado");
     } catch (e) { showToast("❌ Error al exportar", false); }
@@ -200,7 +201,6 @@ export default function CultivoRED() {
     reader.readAsText(file); e.target.value = "";
   };
 
-  // Helper para renderizar los botones de las pestañas
   const renderTab = (id, icon, label) => {
     const active = activeTab === id;
     return (
@@ -250,10 +250,6 @@ export default function CultivoRED() {
         </div>
       </div>
 
-      <div style={{ background: "#1a4731", padding: "9px 44px", fontSize: "0.72rem", color: "rgba(255,255,255,0.8)" }}>
-        💾 Tus cambios se guardan solos. Puedes cambiar de pestaña o cerrar el navegador sin perder datos.
-      </div>
-
       <div style={{ padding: "26px 44px 60px" }}>
         
         {/* ────────────────────────────────────────────────────────────────────────
@@ -261,22 +257,11 @@ export default function CultivoRED() {
             ──────────────────────────────────────────────────────────────────────── */}
         {activeTab === "dashboard" && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-            {/* B1 */}
             <Block num="01" tag="🎯 Estratégico" title="Norte del Piloto" accent="#2d6a4f" bg="#f0faf5">
               <Label>Objetivo de esta fase</Label>
               <EditField value={s.objetivo} onChange={v => upd("objetivo", v)} multiline />
-              <Label>Criterios de éxito</Label>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                {[["Emprendedores", 0], ["Clientes Activados", 1], ["Nodos Testeados", 2], ["Semanas", 3]].map(([lbl, idx]) => (
-                  <div key={lbl} style={{ background: "#ecfdf5", borderRadius: 7, padding: "9px 10px", borderLeft: "3px solid #52b788" }}>
-                    <div style={{ fontSize: "0.58rem", color: "#2d6a4f", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{lbl}</div>
-                    <EditField value={s.exito[idx]} onChange={v => updArr("exito", idx, v)} placeholder="..." />
-                  </div>
-                ))}
-              </div>
             </Block>
 
-            {/* B2 */}
             <Block num="02" tag="🔬 Lean Startup" title="Hipótesis a Validar (T1)" accent="#92400e" bg="#fffbeb">
               {["H1 — (T1b) Journey", "H2 — (T1a) Valor", "H3 — (T1c) Captación"].map((label, i) => (
                 <div key={i} style={{ background: "#fffbeb", borderRadius: 8, borderLeft: `4px solid #f6ad55`, padding: "12px", display: "flex", flexDirection: "column", gap: 6 }}>
@@ -286,19 +271,18 @@ export default function CultivoRED() {
               ))}
             </Block>
 
-            {/* B3 NUEVO ROADMAP */}
             <Block num="03" tag="⚡ Ejecución" title="Ruta del piloto" subtitle="Foco: Validación y Fase 2" accent="#5b21b6" bg="#f5f3ff" fullWidth>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
                 {[
-                  ["Semanas 1–2", "DISEÑO (Adentro hacia afuera)", ["📍 Construcción Journey (Taller UX)", "🎁 Definición Propuesta de Valor Canvas", "👥 Diseño Metodologías Captación"], 0],
-                  ["Semanas 3–4", "TESTEO Y SETUP", ["✅ Pitch validado con invitados", "🗺️ Roadmap Fase 2 construido", "📣 Estrategia de expectativa lanzada"], 1],
-                  ["Semanas 5–6", "FASE 2: ACTIVACIÓN", ["🎉 Activación de chats CultivoRED", "🏘️ Testeo Primer Nodo Territorial", "🌱 Captación primeros emprendedores"], 2],
-                  ["Semanas 7–8", "MEDIR Y AJUSTAR", ["📊 Encuestas y estudios revisados", "🤝 Primer cliente ancla activado", "🔁 Iteración de la propuesta"], 3],
+                  ["Semanas 1–2", "DISEÑO", ["📍 Construcción Journey", "🎁 Definición Propuesta Valor", "👥 Diseño Captación"], 0],
+                  ["Semanas 3–4", "TESTEO", ["✅ Pitch validado", "🗺️ Roadmap Fase 2", "📣 Estrategia expectativa"], 1],
+                  ["Semanas 5–6", "ACTIVACIÓN", ["🎉 Activación chats", "🏘️ Testeo Primer Nodo", "🌱 Captación primeros"], 2],
+                  ["Semanas 7–8", "MEDIR", ["📊 Encuestas revisadas", "🤝 Primer cliente ancla", "🔁 Iteración"], 3],
                 ].map(([semana, fase, items, idx]) => (
                   <div key={fase} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     <div style={{ background: "#1c1c1c", borderRadius: 8, padding: "10px", textAlign: "center" }}>
-                      <div style={{ fontSize: "0.58rem", fontWeight: 700, letterSpacing: "1px", color: "#95d5b2" }}>{semana}</div>
-                      <div style={{ fontFamily: "'Syne',sans-serif", fontSize: "0.8rem", fontWeight: 700, color: "#fff" }}>{fase}</div>
+                      <div style={{ fontSize: "0.58rem", fontWeight: 700, color: "#95d5b2" }}>{semana}</div>
+                      <div style={{ fontFamily: "'Syne',sans-serif", fontSize: "0.8rem", color: "#fff" }}>{fase}</div>
                     </div>
                     {items.map((it, i) => <div key={i} style={{ background: "#fff", border: "1px solid #ede9e0", borderRadius: 6, padding: "7px 10px", fontSize: "0.76rem" }}>{it}</div>)}
                     {s.semanaExtras?.[idx]?.map((ex, i) => <EditField key={i} value={ex} onChange={v => upd("semanaExtras", s.semanaExtras.map((e, j) => j === idx ? s.semanaExtras[idx].map((old, k) => k===i ? v : old) : e))} />)}
@@ -308,14 +292,51 @@ export default function CultivoRED() {
               </div>
             </Block>
 
-            {/* B4 TAREAS */}
-            <Block num="04" tag="📌 Acuerdos" title="Tareas T1, T2, T3" accent="#b7791f" bg="#fffbeb" fullWidth>
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 8, paddingBottom: 7, borderBottom: "1px solid #ede9e0" }}>
-                {["Tarea", "Responsable", "Fecha"].map(h => <div key={h} style={{ fontSize: "0.58rem", fontWeight: 700, textTransform: "uppercase", color: "#7a7265" }}>{h}</div>)}
+            {/* ── B4: NUEVO TABLERO KANBAN DE TAREAS ── */}
+            <Block num="04" tag="📌 Acuerdos" title="Tablero de Tareas Kanban" subtitle="Arrastra las tarjetas para cambiar su estado" accent="#b7791f" bg="#fffbeb" fullWidth>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+                {[
+                  { id: "todo", title: "📝 Por hacer", bg: "#fef3c7", border: "#f59e0b" },
+                  { id: "doing", title: "⏳ En proceso", bg: "#e0e7ff", border: "#6366f1" },
+                  { id: "done", title: "✅ Completadas", bg: "#dcfce7", border: "#22c55e" }
+                ].map(columna => (
+                  <div 
+                    key={columna.id}
+                    onDragOver={onDragOver}
+                    onDrop={(e) => onDrop(e, columna.id)}
+                    style={{ background: "#faf8f2", borderRadius: 10, padding: 12, minHeight: 300, display: "flex", flexDirection: "column", gap: 10, border: "1px solid #ede9e0" }}
+                  >
+                    <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#1c1c1c", borderBottom: `2px solid ${columna.border}`, paddingBottom: 8, marginBottom: 4 }}>
+                      {columna.title}
+                    </div>
+                    {s.tareas.map((t, i) => {
+                      if (t.status !== columna.id) return null;
+                      return (
+                        <div 
+                          key={i} 
+                          draggable 
+                          onDragStart={(e) => onDragStart(e, i)}
+                          style={{ background: columna.bg, borderRadius: 8, padding: 10, border: `1px solid ${columna.border}`, boxShadow: "0 2px 4px rgba(0,0,0,0.05)", cursor: "grab", display: "flex", flexDirection: "column", gap: 6 }}
+                        >
+                          <EditField value={t.texto} onChange={v => updObj("tareas", i, "texto", v)} multiline placeholder="Descripción de la tarea..." bgBlur="transparent" bgFocused="#fff" />
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                            <EditField value={t.responsable} onChange={v => updObj("tareas", i, "responsable", v)} placeholder="👤 Resp..." bgBlur="transparent" bgFocused="#fff" />
+                            <EditField value={t.fecha} onChange={v => updObj("tareas", i, "fecha", v)} placeholder="📅 Fecha..." bgBlur="transparent" bgFocused="#fff" />
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {columna.id === "todo" && (
+                      <button 
+                        onClick={() => upd("tareas", [...s.tareas, { texto: "", responsable: "", fecha: "", status: "todo" }])}
+                        style={{ background: "transparent", border: "1px dashed #c8c2b4", borderRadius: 8, padding: "8px", color: "#6b6459", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", marginTop: "auto" }}
+                      >
+                        + Nueva tarea
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
-              {s.tareas.map((t, i) => (
-                <TareaItem key={i} texto={t.texto} onTexto={v => updObj("tareas", i, "texto", v)} responsable={t.responsable} onResponsable={v => updObj("tareas", i, "responsable", v)} fecha={t.fecha} onFecha={v => updObj("tareas", i, "fecha", v)} done={t.done} onDone={v => updObj("tareas", i, "done", v)} />
-              ))}
             </Block>
           </div>
         )}
