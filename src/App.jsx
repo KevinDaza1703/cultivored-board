@@ -1,24 +1,38 @@
 import { useState, useRef, useEffect } from "react";
 
 // ─── STORAGE HELPERS ──────────────────────────────────────────────────────────
-const STORAGE_KEY = "cultivored_tablero_v8"; // v8 para la nueva estructura Kanban
+const STORAGE_KEY = "cultivored_tablero_v10"; // Mantenemos v10 para no borrar tus datos recientes
 
-// ─── EDITABLE FIELD ───────────────────────────────────────────────────────────
-function EditField({ value, onChange, placeholder = "✏️...", multiline = false, bgFocused = "#fffef7", bgBlur = "#faf8f2" }) {
+// ─── EDITABLE FIELD (Auto-expandible) ─────────────────────────────────────────
+function EditField({ value, onChange, placeholder = "✏️...", multiline = false, bgFocused = "#fffef7", bgBlur = "#faf8f2", textColor = "#1c1c1c" }) {
   const [focused, setFocused] = useState(false);
+  const isWhiteText = textColor === "#ffffff";
+  const textareaRef = useRef(null);
+
+  // Efecto para hacer que el textarea crezca automáticamente sin barras de scroll
+  useEffect(() => {
+    if (multiline && textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
+    }
+  }, [value, multiline]);
+  
   const base = {
     width: "100%", boxSizing: "border-box",
     background: focused ? bgFocused : bgBlur,
-    border: `1.5px dashed ${focused ? "#52B788" : "transparent"}`,
-    borderRadius: 6, padding: "6px 8px",
-    fontFamily: "'DM Sans', sans-serif", fontSize: "0.8rem",
-    color: value ? "#1c1c1c" : "#9a9485",
+    border: `1.5px dashed ${focused ? (isWhiteText ? "rgba(255,255,255,0.6)" : "#52B788") : "transparent"}`,
+    borderRadius: 6, padding: "8px 10px",
+    fontFamily: "'DM Sans', sans-serif", fontSize: "0.78rem",
+    color: value ? textColor : (isWhiteText ? "rgba(255,255,255,0.7)" : "#9a9485"),
     outline: "none", minHeight: multiline ? 44 : 28,
     transition: "border-color 0.2s, background 0.2s",
-    lineHeight: 1.4, resize: multiline ? "vertical" : "none",
+    lineHeight: 1.45, 
+    resize: "none", 
+    overflow: "hidden" 
   };
+  
   return multiline
-    ? <textarea style={base} value={value} placeholder={placeholder}
+    ? <textarea ref={textareaRef} style={base} value={value} placeholder={placeholder}
         onChange={e => onChange(e.target.value)}
         onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
     : <input style={base} value={value} placeholder={placeholder}
@@ -55,7 +69,7 @@ function CardList({ list = [], setList, placeholder, bgField = "#faf8f2" }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       {list.map((item, i) => (
-        <EditField key={i} value={item || ""} multiline bgBlur={bgField}
+        <EditField key={i} value={item || ""} multiline bgBlur={bgField} bgFocused="#fff"
           onChange={val => setList(list.map((e, j) => j === i ? val : e))} 
           placeholder={placeholder} />
       ))}
@@ -67,12 +81,70 @@ function CardList({ list = [], setList, placeholder, bgField = "#faf8f2" }) {
   );
 }
 
-// ─── ESTADO INICIAL ───────────────────────────────────────────────────────────
+// ─── PALETA Y COMPONENTE DE COLOR (Sin solapar texto) ─────────────────────────
+const PALETTE = [
+  { bg: "#ffffff", textC: "#1c1c1c" }, // Blanco
+  { bg: "#6b21a8", textC: "#ffffff" }, // Morado
+  { bg: "#059669", textC: "#ffffff" }, // Verde Oscuro
+  { bg: "#d1d5db", textC: "#1c1c1c" }, // Gris
+  { bg: "#f87171", textC: "#1c1c1c" }, // Rojo/Salmón
+  { bg: "#fb923c", textC: "#1c1c1c" }, // Naranja
+  { bg: "#bbf7d0", textC: "#1c1c1c" }, // Verde Claro
+];
+
+function ColorCardList({ list = [], setList, placeholder }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {list.map((item, i) => (
+        <div key={i} style={{ borderRadius: 8, overflow: "hidden", border: `1px solid ${item.bg === "#ffffff" ? "#e5e7eb" : item.bg}`, background: item.bg || "#ffffff" }}>
+          
+          <EditField 
+            value={item.text || ""} 
+            multiline 
+            bgBlur="transparent" 
+            bgFocused="rgba(0,0,0,0.05)"
+            textColor={item.textC || "#1c1c1c"}
+            onChange={val => {
+              const newList = [...list];
+              newList[i] = { ...newList[i], text: val };
+              setList(newList);
+            }} 
+            placeholder={placeholder} 
+          />
+          
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 5, padding: "0 8px 8px", opacity: 0.8 }}>
+             {PALETTE.map((c, cIdx) => (
+                <div 
+                  key={cIdx} 
+                  onClick={() => {
+                    const newList = [...list];
+                    newList[i] = { ...newList[i], bg: c.bg, textC: c.textC };
+                    setList(newList);
+                  }}
+                  style={{ width: 14, height: 14, borderRadius: "50%", background: c.bg, border: "1px solid rgba(0,0,0,0.2)", cursor: "pointer" }}
+                  title="Cambiar color"
+                />
+             ))}
+             <div onClick={() => setList(list.filter((_, j) => j !== i))} style={{ fontSize: "11px", cursor: "pointer", marginLeft: 6, padding: "0 2px" }} title="Borrar">❌</div>
+          </div>
+        </div>
+      ))}
+      <button onClick={() => setList([...list, { text: "", bg: "#ffffff", textC: "#1c1c1c" }])}
+        style={{ fontSize: "0.68rem", color: "#6b6459", background: "none", border: "1px dashed #c8c2b4", borderRadius: 6, padding: "6px", cursor: "pointer", opacity: 0.8, marginTop: 2 }}>
+        + Agregar bloque
+      </button>
+    </div>
+  );
+}
+
+// ─── ESTADO INICIAL ────────────────────────────────────────────────────────
 const INITIAL = {
-  territorio: "", duracion: "8 semanas",
-  vision: "CultivoRED es una plataforma híbrida, social y transaccional, basada en confianza territorial, que conecta emprendedores, clientes y mercados para generar valor económico y social sostenible.",
-  objetivo: "Validar el journey, la propuesta de valor y el modelo de captación de CultivoRED, testeando un Nodo Territorial en la Fase 2.",
-  exito: ["", "", "", ""],
+  nodoTerritorial: "",
+  liderTerritorial: "",
+  replicador: "",
+  semanasPiloto: "8 semanas",
+  accionesValidar: "",
+
   hips: [
     { enunciado: "Podemos definir y mapear el 'journey' de cada cliente (Descubrir → Registrarse → Validar → Conectar → Crecer) para entender sus dolores y expectativas reales.", valida: "Taller UX + Mapa de empatía", indicador: "Journey Map documentado" },
     { enunciado: "Podemos definir una propuesta de valor clara y diferenciada para cada segmento (Ej: Semilla vs Raíz) que resuelva problemas específicos en su etapa actual.", valida: "Value Proposition Canvas", indicador: "Propuestas de valor consolidadas" },
@@ -103,12 +175,34 @@ const INITIAL = {
     creadores: ["Visibilidad garantizada ante clientes ancla", "Pertenecer a una red de confianza"],
   },
   bmc: {
-    aliados: ["Medios de comunicación", "Cámaras de comercio", "Cajas de compensación", "Universidades", "Centros de Investigación", "SENA", "Alcaldías locales", "Cooperación: GIZ, PNUD"],
-    recursos: ["Contenido educativo", "Plataforma Digital CultivoRED - Juli AI", "Comunidad WhatsApp", "Kits territoriales", "Nodos territoriales formados", "Datos georreferenciados"],
-    propuesta: ["Acceso a conocimiento y tecnología", "Conexión para aumentar transacciones", "Apoyo en formalización", "Visibilidad con clientes ideales", "Sello de Origen MásPorTIC"],
-    canales: ["Plataforma CultivoRED / Juli AI", "Eventos promovidos por nodos", "Gremio Agtech y Redes Sociales", "Ferias y encuentros", "SECOP II licitaciones"],
-    segmentos: ["Emprendedores rurales", "Agricultores", "Proveedores de insumos", "Turismo comunitario", "Hipermercados (Ley 30%)", "Empresas transformadoras"],
-    monetizacion: ["Contratos con el Estado", "Cobro de plan a proveedores", "Porcentaje por conectar", "Servicio por experiencias", "Suscripción por niveles"],
+    aliados: [{ text: "• Medios de comunicación alternativos como tradicionales...\n• Cámaras de comercio\n• Cajas de compensación familiar\n• Universidades - Prácticas...\n• Centros de investigación\n• SENA\n• Quienes ofrezcan cursos...\n• Alcaldía locales y de ciudades\n• Compañías de redes sociales, apps...\n• Programas de emprendimiento...\n• Tigo - Millicom\n• Aliados y clientes de MásPorTIC...\n• Cooperación: GIZ, PNUD...\n• Organizadores de ferias", bg: "#ffffff", textC: "#1c1c1c" }],
+    recursos: [{ text: "• Contenido educativo para todos los públicos...\n• La plataforma Digital de CultivoRED - Juli IA\n• Comunidad de emprendedores rurales - whatsapp\n• Kits (pendón, afiches, folletos...)\n• Nodos territoriales formados\n• Personas de acercamiento comercial\n• Equipo para despliegue de eventos...\n• Gestionar las comunicaciones - redes sociales\n• Planeación financiera y priorización...\n• Datos georreferenciados y reportes\n• Acuerdo formales firmados...\n• Gestión de la comunidad de cultivoRED\n• Producción audiovisual constante\n• Relacionistas públicos...\n• Formación y capacitación - canal de entrega", bg: "#ffffff", textC: "#1c1c1c" }],
+    propuesta: [
+      { text: "Acceso a conocimiento\nConexión para aumentar sus transacciones generar dinero\nAcceso a tecnología - Chatbot asesoría\nManera de mejorar su proceso de producción y servicio\nVisibilidad de sus productos y servicios\nApoyo en su formalización y asociatividad - digitalización\nFortalecimiento de capacidades - liderazgo", bg: "#6b21a8", textC: "#ffffff" },
+      { text: "Acceso a su segmento de clientes ideales para tener una visibilidad de su servicio o producto.\nEntender a su cliente.\nPilotear nuevos productos que quieran sacar al mercado", bg: "#059669", textC: "#ffffff" },
+      { text: "Cumplir la ley que exige la compra de productos frescos al campesino - conectado a su estrategia de responsabilidad social. (beneficios tributarios)\nAcceso a productores con buenas prácticas y reconocidos por MásPorTIC (sello)...", bg: "#d1d5db", textC: "#1c1c1c" },
+      { text: "Alianzas de valor con acompañamiento y entrenamiento...\nCumplimiento de planes de desarrollo, Implementación...\nFacilitar ejercicios participativos - codiseño\nIdentificar oportunidades en el campo, diagnóstico...\nCumplimiento de metas especialmente con temas de sostenibilidad...\nPilotos y experimentación para proyectos nuevos.\nCapacitación y apropiación digital a sus beneficiarios...", bg: "#f87171", textC: "#1c1c1c" },
+      { text: "Acceso de confianza a vivir experiencias inmersivas, turismo productivo o visitas guiadas en la zona rural de comunidades activas con MásPorTIC para estudiantes, empleados u otros.", bg: "#bbf7d0", textC: "#1c1c1c" },
+      { text: "Conectar\nRelacionamiento entre todos los actores\nConfianza en el relacionamiento", bg: "#ffffff", textC: "#1c1c1c" }
+    ],
+    canales: [
+      { text: "Plataforma CultivoRED (Whatsapp comunidades) Juli IA\nEventos promovidos por los nodos territoriales\nDesde los de todos los programas de MásPorTIC como 1,2,3xMiNegocio\nOrganizaciones Ancla que sus proveedores son rurales\nEntidades territoriales, CC, secretarías de desarrollo...\nFacebook - tiktok", bg: "#6b21a8", textC: "#ffffff" },
+      { text: "CultivoRed (plataforma), redes sociales\nGremio Agtech\nEventos propios Agro - encuentros, ferias.\nLinkedIN", bg: "#059669", textC: "#ffffff" },
+      { text: "Redes sociales, ferias (ANATO, agroferias), eventos presenciales.\nCanal propio vitrina pública (Juli IA plataforma)\nReuniones uno a uno comerciales con portafolio\nNodos regionales MásPorTIC (replicadores - semillas)", bg: "#d1d5db", textC: "#1c1c1c" },
+      { text: "SECOP II licitaciones asociadas\nPlataformas de publicación de convocatorias y grants\nConstrucción de propuestas a la medida.\nReportes de impacto sobre realidad rural...\nEventos virtuales, presenciales - networking\nFerias o invitaciones especificas\nReuniones de conexión con entidades.", bg: "#f87171", textC: "#1c1c1c" },
+      { text: "Universidades y Colegios: Redes sociales (instagram)\nCorreo electrónico para enviar propuestas y ofrecer\nPlataformas especializadas de turismo y pasadía...\nVoz a voz reuniones virtuales y presenciales\nGremios del sector educativo\nJuli IA plataforma tenga la forma de solicitar el servicio\nPlataformas como Airbnb - experiencias", bg: "#bbf7d0", textC: "#1c1c1c" }
+    ],
+    segmentos: [
+      { text: "Emprendedores rurales\nAgricultores - productores materias primas\nAsociaciones\nPersona/organización que ofrece servicios turismo en zona rural (turismo comunitario)\nPersonas de la zona rural de cualquier edad de desean emprender y tienen una idea", bg: "#6b21a8", textC: "#ffffff" },
+      { text: "Proveedores de insumos en el sector rural\nAgtechs al sector rural ofrecen productos y servicios al sector rurales", bg: "#059669", textC: "#ffffff" },
+      { text: "Hipermercados que deben comprar el 30% de toda su vitrina de ventas por compra directa a campesinos de Colombia", bg: "#d1d5db", textC: "#1c1c1c" },
+      { text: "Megafruvers grandes que son potenciales compradores al productor - campesino\nEmpresas transformadoras que requieren insumos. Y otras empresas como Alquería, Nutresa, Alpina ...\nCooperativas, empresas que tienen comunidades productivas rurales", bg: "#f87171", textC: "#1c1c1c" },
+      { text: "Agencias de viaje\nAgencias de cooperación internacional buscando emprendedores de impacto. Ejemplo FAO\nGobiernos, entidades territoriales", bg: "#fb923c", textC: "#1c1c1c" },
+      { text: "Personas u organizaciones de la zona urbana interesadas en experiencias rurales", bg: "#bbf7d0", textC: "#1c1c1c" }
+    ],
+    monetizacion: [
+      { text: "• Contratos con el Estado y convocatorias ganadas\n• Cobro plan a proveedores de insumos por maketing digital, visibilización\n• Porcentaje por conectar con proveedores y gestionad sus proveedores\n• Servicio por las experiencias rurales\n• Suscripción por tipos de usuarios emprendedores rurales según los servicios, acceso, según los niveles...", bg: "#ffffff", textC: "#1c1c1c" }
+    ],
   }
 };
 
@@ -124,7 +218,7 @@ export default function CultivoRED() {
           ...parsed,
           empatia: { ...INITIAL.empatia, ...(parsed.empatia || {}) },
           valueProp: { ...INITIAL.valueProp, ...(parsed.valueProp || {}) },
-          bmc: { ...INITIAL.bmc, ...(parsed.bmc || {}) }
+          bmc: parsed.bmc || INITIAL.bmc
         };
       }
       return INITIAL;
@@ -134,7 +228,6 @@ export default function CultivoRED() {
   const [activeTab, setActiveTab] = useState("dashboard"); 
   const [toast, setToast] = useState(null);
   const fileRef = useRef(null);
-  
   const [draggedItemIndex, setDraggedItemIndex] = useState(null);
 
   useEffect(() => {
@@ -148,20 +241,11 @@ export default function CultivoRED() {
 
   const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3500); };
 
-  // ── LÓGICA KANBAN ──
-  const onDragStart = (e, index) => {
-    setDraggedItemIndex(index);
-    e.dataTransfer.effectAllowed = "move";
-  };
-
-  const onDragOver = (e) => {
-    e.preventDefault(); 
-  };
-
+  const onDragStart = (e, index) => { setDraggedItemIndex(index); e.dataTransfer.effectAllowed = "move"; };
+  const onDragOver = (e) => e.preventDefault(); 
   const onDrop = (e, statusDestino) => {
     e.preventDefault();
     if (draggedItemIndex === null) return;
-    
     const nuevasTareas = [...s.tareas];
     nuevasTareas[draggedItemIndex].status = statusDestino;
     upd("tareas", nuevasTareas);
@@ -170,11 +254,11 @@ export default function CultivoRED() {
 
   const exportar = () => {
     try {
-      const payload = JSON.stringify({ _version: "v8", _fecha: new Date().toISOString(), ...s }, null, 2);
+      const payload = JSON.stringify({ _version: "v10", _fecha: new Date().toISOString(), ...s }, null, 2);
       const blob = new Blob([payload], { type: "application/json;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = url; link.download = `cultivored-v8-${new Date().toISOString().slice(0, 10)}.json`;
+      link.href = url; link.download = `cultivored-v10-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(link); link.click(); document.body.removeChild(link);
       showToast("✅ Tablero exportado");
     } catch (e) { showToast("❌ Error al exportar", false); }
@@ -193,7 +277,7 @@ export default function CultivoRED() {
           ...datos,
           empatia: { ...INITIAL.empatia, ...(datos.empatia || {}) },
           valueProp: { ...INITIAL.valueProp, ...(datos.valueProp || {}) },
-          bmc: { ...INITIAL.bmc, ...(datos.bmc || {}) }
+          bmc: datos.bmc || INITIAL.bmc
         });
         showToast("✅ Tablero restaurado");
       } catch (err) { showToast("❌ Archivo inválido", false); }
@@ -252,14 +336,46 @@ export default function CultivoRED() {
 
       <div style={{ padding: "26px 44px 60px" }}>
         
-        {/* ────────────────────────────────────────────────────────────────────────
-            PESTAÑA 1: TABLERO GENERAL (DASHBOARD)
-            ──────────────────────────────────────────────────────────────────────── */}
+        {/* PESTAÑA 1: TABLERO GENERAL */}
         {activeTab === "dashboard" && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+            
             <Block num="01" tag="🎯 Estratégico" title="Norte del Piloto" accent="#2d6a4f" bg="#f0faf5">
-              <Label>Objetivo de esta fase</Label>
-              <EditField value={s.objetivo} onChange={v => upd("objetivo", v)} multiline />
+              
+              {/* Contexto y Descripciones */}
+              <div style={{ background: "#e6f4ea", padding: "14px 18px", borderRadius: 8, marginBottom: 4 }}>
+                <h4 style={{ margin: "0 0 6px 0", color: "#1a4731", fontSize: "0.85rem", fontFamily: "'Syne', sans-serif" }}>¿Qué es CultivoRED?</h4>
+                <p style={{ margin: 0, fontSize: "0.75rem", color: "#2d6a4f", lineHeight: 1.5 }}>
+                  Es una plataforma híbrida, social y transaccional, basada en confianza territorial, que conecta emprendedores, clientes y mercados para generar valor económico y social sostenible.
+                </p>
+              </div>
+              <div style={{ background: "#e6f4ea", padding: "14px 18px", borderRadius: 8, marginBottom: 14 }}>
+                <h4 style={{ margin: "0 0 6px 0", color: "#1a4731", fontSize: "0.85rem", fontFamily: "'Syne', sans-serif" }}>¿Qué es un Nodo Territorial?</h4>
+                <p style={{ margin: 0, fontSize: "0.75rem", color: "#2d6a4f", lineHeight: 1.5 }}>
+                  Es el punto de presencia física y humana de CultivoRED. Donde la plataforma deja de ser digital y se convierte en confianza real: se registran emprendedores, se valida oferta, se activan eventos y se construyen relaciones.
+                </p>
+              </div>
+
+              {/* Variables a validar */}
+              <Label>Variables de Validación (Fase 2)</Label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {[
+                  ["📍 Nodo territorial", "nodoTerritorial", "Ej. El Carmen de Viboral"],
+                  ["👤 Líder Territorial", "liderTerritorial", "Nombre del líder..."],
+                  ["🌱 Replicador", "replicador", "Nombre del replicador..."],
+                  ["⏳ Semanas del piloto", "semanasPiloto", "Ej. 8 semanas"],
+                ].map(([lbl, key, ph]) => (
+                  <div key={key} style={{ background: "#ecfdf5", borderRadius: 7, padding: "9px 10px", borderLeft: "3px solid #52b788" }}>
+                    <div style={{ fontSize: "0.58rem", color: "#2d6a4f", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>{lbl}</div>
+                    <EditField value={s[key] || ""} onChange={v => upd(key, v)} placeholder={ph} />
+                  </div>
+                ))}
+                
+                <div style={{ gridColumn: "1 / -1", background: "#ecfdf5", borderRadius: 7, padding: "9px 10px", borderLeft: "3px solid #52b788" }}>
+                  <div style={{ fontSize: "0.58rem", color: "#2d6a4f", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>✅ Acciones a validar</div>
+                  <EditField value={s.accionesValidar || ""} onChange={v => upd("accionesValidar", v)} multiline placeholder="¿Qué vamos a validar exactamente en este Nodo?" />
+                </div>
+              </div>
             </Block>
 
             <Block num="02" tag="🔬 Lean Startup" title="Hipótesis a Validar (T1)" accent="#92400e" bg="#fffbeb">
@@ -272,7 +388,7 @@ export default function CultivoRED() {
             </Block>
 
             <Block num="03" tag="⚡ Ejecución" title="Ruta del piloto" subtitle="Foco: Validación y Fase 2" accent="#5b21b6" bg="#f5f3ff" fullWidth>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 14 }}>
                 {[
                   ["Semanas 1–2", "DISEÑO", ["📍 Construcción Journey", "🎁 Definición Propuesta Valor", "👥 Diseño Captación"], 0],
                   ["Semanas 3–4", "TESTEO", ["✅ Pitch validado", "🗺️ Roadmap Fase 2", "📣 Estrategia expectativa"], 1],
@@ -292,32 +408,23 @@ export default function CultivoRED() {
               </div>
             </Block>
 
-            {/* ── B4: NUEVO TABLERO KANBAN DE TAREAS ── */}
             <Block num="04" tag="📌 Acuerdos" title="Tablero de Tareas Kanban" subtitle="Arrastra las tarjetas para cambiar su estado" accent="#b7791f" bg="#fffbeb" fullWidth>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 14 }}>
                 {[
                   { id: "todo", title: "📝 Por hacer", bg: "#fef3c7", border: "#f59e0b" },
                   { id: "doing", title: "⏳ En proceso", bg: "#e0e7ff", border: "#6366f1" },
                   { id: "done", title: "✅ Completadas", bg: "#dcfce7", border: "#22c55e" }
                 ].map(columna => (
                   <div 
-                    key={columna.id}
-                    onDragOver={onDragOver}
-                    onDrop={(e) => onDrop(e, columna.id)}
+                    key={columna.id} onDragOver={onDragOver} onDrop={(e) => onDrop(e, columna.id)}
                     style={{ background: "#faf8f2", borderRadius: 10, padding: 12, minHeight: 300, display: "flex", flexDirection: "column", gap: 10, border: "1px solid #ede9e0" }}
                   >
-                    <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#1c1c1c", borderBottom: `2px solid ${columna.border}`, paddingBottom: 8, marginBottom: 4 }}>
-                      {columna.title}
-                    </div>
+                    <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#1c1c1c", borderBottom: `2px solid ${columna.border}`, paddingBottom: 8, marginBottom: 4 }}>{columna.title}</div>
                     {s.tareas.map((t, i) => {
                       if (t.status !== columna.id) return null;
                       return (
-                        <div 
-                          key={i} 
-                          draggable 
-                          onDragStart={(e) => onDragStart(e, i)}
-                          style={{ background: columna.bg, borderRadius: 8, padding: 10, border: `1px solid ${columna.border}`, boxShadow: "0 2px 4px rgba(0,0,0,0.05)", cursor: "grab", display: "flex", flexDirection: "column", gap: 6 }}
-                        >
+                        <div key={i} draggable onDragStart={(e) => onDragStart(e, i)}
+                          style={{ background: columna.bg, borderRadius: 8, padding: 10, border: `1px solid ${columna.border}`, boxShadow: "0 2px 4px rgba(0,0,0,0.05)", cursor: "grab", display: "flex", flexDirection: "column", gap: 6 }}>
                           <EditField value={t.texto} onChange={v => updObj("tareas", i, "texto", v)} multiline placeholder="Descripción de la tarea..." bgBlur="transparent" bgFocused="#fff" />
                           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                             <EditField value={t.responsable} onChange={v => updObj("tareas", i, "responsable", v)} placeholder="👤 Resp..." bgBlur="transparent" bgFocused="#fff" />
@@ -327,10 +434,8 @@ export default function CultivoRED() {
                       );
                     })}
                     {columna.id === "todo" && (
-                      <button 
-                        onClick={() => upd("tareas", [...s.tareas, { texto: "", responsable: "", fecha: "", status: "todo" }])}
-                        style={{ background: "transparent", border: "1px dashed #c8c2b4", borderRadius: 8, padding: "8px", color: "#6b6459", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", marginTop: "auto" }}
-                      >
+                      <button onClick={() => upd("tareas", [...s.tareas, { texto: "", responsable: "", fecha: "", status: "todo" }])}
+                        style={{ background: "transparent", border: "1px dashed #c8c2b4", borderRadius: 8, padding: "8px", color: "#6b6459", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", marginTop: "auto" }}>
                         + Nueva tarea
                       </button>
                     )}
@@ -341,16 +446,13 @@ export default function CultivoRED() {
           </div>
         )}
 
-        {/* ────────────────────────────────────────────────────────────────────────
-            PESTAÑA 2: MAPA DE EMPATÍA
-            ──────────────────────────────────────────────────────────────────────── */}
+        {/* PESTAÑA 2: MAPA DE EMPATÍA */}
         {activeTab === "empatia" && (
           <div style={{ background: "#fff", borderRadius: 14, padding: 30, boxShadow: "0 2px 20px rgba(0,0,0,0.06)" }}>
             <div style={{ textAlign: "center", marginBottom: 30 }}>
               <h2 style={{ fontFamily: "'Syne',sans-serif", margin: 0, color: "#1c1c1c", fontSize: "1.8rem" }}>Mapa de Empatía</h2>
               <p style={{ color: "#6b6459", fontSize: "0.85rem", margin: "5px 0 0" }}>Para entender al Emprendedor Rural antes de diseñar la propuesta.</p>
             </div>
-            
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
               <div style={{ background: "#fef3c7", padding: 20, borderRadius: 12, border: "2px solid #fcd34d" }}>
                 <Label>🤔 ¿Qué piensa y siente?</Label>
@@ -369,7 +471,6 @@ export default function CultivoRED() {
                 <CardList list={s.empatia?.escucha} setList={v => updNested("empatia", "escucha", v)} bgField="#fff" />
               </div>
             </div>
-
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
               <div style={{ background: "#faf8f2", padding: 20, borderRadius: 12, borderTop: "4px solid #ef4444" }}>
                 <Label>❌ Esfuerzos / Dolores</Label>
@@ -383,20 +484,16 @@ export default function CultivoRED() {
           </div>
         )}
 
-        {/* ────────────────────────────────────────────────────────────────────────
-            PESTAÑA 3: VALUE PROPOSITION CANVAS
-            ──────────────────────────────────────────────────────────────────────── */}
+        {/* PESTAÑA 3: VALUE PROPOSITION CANVAS */}
         {activeTab === "valueProp" && (
           <div style={{ background: "#fff", borderRadius: 14, padding: 30, boxShadow: "0 2px 20px rgba(0,0,0,0.06)" }}>
             <div style={{ textAlign: "center", marginBottom: 30 }}>
               <h2 style={{ fontFamily: "'Syne',sans-serif", margin: 0, color: "#1c1c1c", fontSize: "1.8rem" }}>Value Proposition Canvas</h2>
               <p style={{ color: "#6b6459", fontSize: "0.85rem", margin: "5px 0 0" }}>El encaje entre lo que el cliente necesita y lo que CultivoRED ofrece.</p>
             </div>
-
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 30 }}>
               <div style={{ border: "2px dashed #95d5b2", borderRadius: 12, padding: 24, position: "relative", background: "#f0faf5" }}>
                 <div style={{ position: "absolute", top: -14, left: "50%", transform: "translateX(-50%)", background: "#2d6a4f", color: "#fff", padding: "4px 14px", borderRadius: 20, fontSize: "0.75rem", fontWeight: 700 }}>🎁 TU PROPUESTA DE VALOR</div>
-                
                 <div style={{ marginBottom: 20, marginTop: 10 }}>
                   <Label>📦 Productos y Servicios</Label>
                   <CardList list={s.valueProp?.productos} setList={v => updNested("valueProp", "productos", v)} bgField="#fff" />
@@ -412,10 +509,8 @@ export default function CultivoRED() {
                   </div>
                 </div>
               </div>
-
               <div style={{ border: "2px dashed #fca5a5", borderRadius: "100px", padding: "40px 30px", position: "relative", background: "#fff5f5", display: "flex", flexDirection: "column", justifyContent: "center" }}>
                 <div style={{ position: "absolute", top: -14, left: "50%", transform: "translateX(-50%)", background: "#dc2626", color: "#fff", padding: "4px 14px", borderRadius: 20, fontSize: "0.75rem", fontWeight: 700 }}>👤 SEGMENTO DE CLIENTE</div>
-                
                 <div style={{ marginBottom: 20 }}>
                   <Label>📝 Tareas del Cliente (Jobs to be done)</Label>
                   <CardList list={s.valueProp?.tareas} setList={v => updNested("valueProp", "tareas", v)} bgField="#fff" />
@@ -435,9 +530,7 @@ export default function CultivoRED() {
           </div>
         )}
 
-        {/* ────────────────────────────────────────────────────────────────────────
-            PESTAÑA 4: SEMILLA DE MI NEGOCIO (BMC)
-            ──────────────────────────────────────────────────────────────────────── */}
+        {/* PESTAÑA 4: SEMILLA DE MI NEGOCIO CON COLUMNAS IDÉNTICAS Y SCROLL HORIZONTAL */}
         {activeTab === "bmc" && (
           <div style={{ background: "#fff", borderRadius: 14, padding: "20px", boxShadow: "0 2px 20px rgba(0,0,0,0.06)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, borderBottom: "3px solid #166534", paddingBottom: 10 }}>
@@ -445,39 +538,45 @@ export default function CultivoRED() {
               <span style={{ fontSize: "1.5rem" }}>🌱</span>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, alignItems: "start" }}>
-              <div style={{ background: "#bfdbfe", padding: 14, borderRadius: 8, minHeight: 400 }}>
-                <div style={{ fontWeight: 800, color: "#1e3a8a", fontSize: "0.8rem", marginBottom: 10 }}>🤝 ALIADOS CLAVE<br/><span style={{fontWeight:400, fontSize:"0.65rem"}}>¿Quién te puede ayudar?</span></div>
-                <CardList list={s.bmc?.aliados} setList={v => updNested("bmc", "aliados", v)} bgField="#fff" />
-              </div>
-              <div style={{ background: "#60a5fa", padding: 14, borderRadius: 8, minHeight: 400 }}>
-                <div style={{ fontWeight: 800, color: "#fff", fontSize: "0.8rem", marginBottom: 10 }}>🔧 RECURSOS CLAVE<br/><span style={{fontWeight:400, fontSize:"0.65rem"}}>¿Qué necesitas?</span></div>
-                <CardList list={s.bmc?.recursos} setList={v => updNested("bmc", "recursos", v)} bgField="#fff" />
-              </div>
-              <div style={{ background: "#f87171", padding: 14, borderRadius: 8, minHeight: 400 }}>
-                <div style={{ fontWeight: 800, color: "#fff", fontSize: "0.8rem", marginBottom: 10 }}>🎁 PROPUESTA DE VALOR<br/><span style={{fontWeight:400, fontSize:"0.65rem"}}>¿Qué haces diferente?</span></div>
-                <CardList list={s.bmc?.propuesta} setList={v => updNested("bmc", "propuesta", v)} bgField="#fff" />
-              </div>
-              <div style={{ background: "#f87171", padding: 14, borderRadius: 8, minHeight: 400, position:"relative", overflow:"hidden" }}>
-                <div style={{position:"absolute", top:0, left:0, right:0, height:"30%", background:"#dc2626", zIndex:0}}></div>
-                <div style={{position:"relative", zIndex:1}}>
-                  <div style={{ fontWeight: 800, color: "#fff", fontSize: "0.8rem", marginBottom: 10 }}>📣 CANALES<br/><span style={{fontWeight:400, fontSize:"0.65rem"}}>¿Cómo llegas a los clientes?</span></div>
-                  <CardList list={s.bmc?.canales} setList={v => updNested("bmc", "canales", v)} bgField="#fff" />
+            {/* Este contenedor permite el scroll horizontal en pantallas pequeñas */}
+            <div style={{ overflowX: "auto", paddingBottom: "10px" }}>
+              {/* Le damos un ancho mínimo de 1100px para que las 5 columnas nunca se aplasten */}
+              <div style={{ minWidth: 1100 }}>
+                
+                {/* minmax(0, 1fr) obliga a CSS Grid a hacer las columnas EXACTAMENTE iguales */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 12, alignItems: "start" }}>
+                  <div style={{ background: "#bfdbfe", padding: 14, borderRadius: 8, minHeight: 400 }}>
+                    <div style={{ fontWeight: 800, color: "#1e3a8a", fontSize: "0.8rem", marginBottom: 10 }}>🤝 ALIADOS CLAVE</div>
+                    <ColorCardList list={s.bmc?.aliados} setList={v => updNested("bmc", "aliados", v)} placeholder="Escribe el aliado..." />
+                  </div>
+                  <div style={{ background: "#60a5fa", padding: 14, borderRadius: 8, minHeight: 400 }}>
+                    <div style={{ fontWeight: 800, color: "#fff", fontSize: "0.8rem", marginBottom: 10 }}>🔧 RECURSOS CLAVE</div>
+                    <ColorCardList list={s.bmc?.recursos} setList={v => updNested("bmc", "recursos", v)} placeholder="Escribe el recurso..." />
+                  </div>
+                  <div style={{ background: "#f87171", padding: 14, borderRadius: 8, minHeight: 400 }}>
+                    <div style={{ fontWeight: 800, color: "#fff", fontSize: "0.8rem", marginBottom: 10 }}>🎁 PROPUESTA DE VALOR</div>
+                    <ColorCardList list={s.bmc?.propuesta} setList={v => updNested("bmc", "propuesta", v)} placeholder="Escribe la propuesta..." />
+                  </div>
+                  <div style={{ background: "#f87171", padding: 14, borderRadius: 8, minHeight: 400, position:"relative", overflow:"hidden" }}>
+                    <div style={{position:"absolute", top:0, left:0, right:0, height:"100px", background:"#dc2626", zIndex:0}}></div>
+                    <div style={{position:"relative", zIndex:1}}>
+                      <div style={{ fontWeight: 800, color: "#fff", fontSize: "0.8rem", marginBottom: 10 }}>📣 CANALES</div>
+                      <ColorCardList list={s.bmc?.canales} setList={v => updNested("bmc", "canales", v)} placeholder="Escribe el canal..." />
+                    </div>
+                  </div>
+                  <div style={{ background: "#fde047", padding: 14, borderRadius: 8, minHeight: 400 }}>
+                    <div style={{ fontWeight: 800, color: "#854d0e", fontSize: "0.8rem", marginBottom: 10 }}>👤 CLIENTES - SEGMENTOS</div>
+                    <ColorCardList list={s.bmc?.segmentos} setList={v => updNested("bmc", "segmentos", v)} placeholder="Escribe el segmento..." />
+                  </div>
+                </div>
+
+                <div style={{ background: "#10b981", padding: 14, borderRadius: 8, marginTop: 12 }}>
+                  <div style={{ fontWeight: 800, color: "#fff", fontSize: "0.8rem", marginBottom: 10 }}>💰 MONETIZACIÓN - FUENTE DE INGRESOS</div>
+                  <ColorCardList list={s.bmc?.monetizacion} setList={v => updNested("bmc", "monetizacion", v)} placeholder="Escribe la fuente de ingresos..." />
                 </div>
               </div>
-              <div style={{ background: "#fde047", padding: 14, borderRadius: 8, minHeight: 400 }}>
-                <div style={{ fontWeight: 800, color: "#854d0e", fontSize: "0.8rem", marginBottom: 10 }}>👤 CLIENTES - SEGMENTOS</div>
-                <CardList list={s.bmc?.segmentos} setList={v => updNested("bmc", "segmentos", v)} bgField="#fff" />
-              </div>
             </div>
-
-            <div style={{ background: "#10b981", padding: 14, borderRadius: 8, marginTop: 12 }}>
-              <div style={{ fontWeight: 800, color: "#fff", fontSize: "0.8rem", marginBottom: 10 }}>💰 MONETIZACIÓN - FUENTE DE INGRESOS <span style={{fontWeight:400, fontSize:"0.65rem"}}>¿Cuántos ingresos tendrás?</span></div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <CardList list={s.bmc?.monetizacion} setList={v => updNested("bmc", "monetizacion", v)} bgField="#fff" />
-              </div>
-            </div>
-
+            
           </div>
         )}
 
