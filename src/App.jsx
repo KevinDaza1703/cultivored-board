@@ -141,7 +141,7 @@ function PVSegmentos({ s, upd }) {
         <span style={{ fontSize:"1.8rem" }}>🎯</span>
         <div>
           <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:"1rem", color:"#fff", marginBottom:3 }}>Propuestas de Valor por Segmento — Piloto Bucaramanga T1</div>
-          <div style={{ fontSize:"0.73rem", color:"rgba(149,213,178,0.85)", lineHeight:1.4 }}>Encaje entre lo que necesita el emprendedor rural y lo que CultivoRED ofrece. Editá los campos directamente.</div>
+          <div style={{ fontSize:"0.73rem", color:"rgba(149,213,178,0.85)", lineHeight:1.4 }}>Encaje entre lo que necesita el emprendedor rural y lo que CultivoRED ofrece. Edita los campos directamente.</div>
         </div>
       </div>
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
@@ -158,7 +158,7 @@ function PVSegmentos({ s, upd }) {
           </div>
           <div>
             <div style={rowLabel}>🎁 Declaración de propuesta de valor</div>
-            <textarea value={s.pvSemillaDeclaracion || ""} onChange={e => upd("pvSemillaDeclaracion", e.target.value)} placeholder="✏️ Declaración PV Semilla..." style={ta("#52b788")} />
+            <textarea value={s.pvSemillaDeclaracion || ""} onChange={e => upd("pvSemillaDeclaracion", e.target.value)} placeholder="✏️ Escribe la declaración PV Semilla..." style={ta("#52b788")} />
           </div>
           <div>
             <div style={rowLabel}>❌ Dolores que resuelve → cómo</div>
@@ -172,7 +172,7 @@ function PVSegmentos({ s, upd }) {
           <div>
             <div style={rowLabel}>✅ Ganancia concreta al terminar las 8 semanas</div>
             <div style={{ background:"#d8f3dc", borderRadius:8, padding:"2px 4px", border:"1px solid #74c69d" }}>
-              <textarea value={s.pvSemillaPromesa || ""} onChange={e => upd("pvSemillaPromesa", e.target.value)} placeholder="✏️ ¿Qué tiene el emprendedor al terminar?" style={{ ...ta("transparent","#1b4332",52), background:"transparent", border:"none" }} />
+              <textarea value={s.pvSemillaPromesa || ""} onChange={e => upd("pvSemillaPromesa", e.target.value)} placeholder="✏️ ¿Qué tiene el emprendedor cuando termina?" style={{ ...ta("transparent","#1b4332",52), background:"transparent", border:"none" }} />
             </div>
           </div>
         </div>
@@ -189,7 +189,7 @@ function PVSegmentos({ s, upd }) {
           </div>
           <div>
             <div style={rowLabel}>🎁 Declaración de propuesta de valor</div>
-            <textarea value={s.pvRaizDeclaracion || ""} onChange={e => upd("pvRaizDeclaracion", e.target.value)} placeholder="✏️ Declaración PV Raíz..." style={ta("#b7791f")} />
+            <textarea value={s.pvRaizDeclaracion || ""} onChange={e => upd("pvRaizDeclaracion", e.target.value)} placeholder="✏️ Escribe la declaración PV Raíz..." style={ta("#b7791f")} />
           </div>
           <div>
             <div style={rowLabel}>❌ Dolores que resuelve → cómo</div>
@@ -203,7 +203,7 @@ function PVSegmentos({ s, upd }) {
           <div>
             <div style={rowLabel}>✅ Ganancia concreta al terminar las 8 semanas</div>
             <div style={{ background:"#fef3c7", borderRadius:8, padding:"2px 4px", border:"1px solid #f6ad55" }}>
-              <textarea value={s.pvRaizPromesa || ""} onChange={e => upd("pvRaizPromesa", e.target.value)} placeholder="✏️ ¿Qué tiene el emprendedor al terminar?" style={{ ...ta("transparent","#92400e",52), background:"transparent", border:"none" }} />
+              <textarea value={s.pvRaizPromesa || ""} onChange={e => upd("pvRaizPromesa", e.target.value)} placeholder="✏️ ¿Qué tiene el emprendedor cuando termina?" style={{ ...ta("transparent","#92400e",52), background:"transparent", border:"none" }} />
             </div>
           </div>
         </div>
@@ -221,37 +221,59 @@ function PVSegmentos({ s, upd }) {
 // ─── JOURNEY + ROADMAP ────────────────────────────────────────────────────────
 function JourneyRoadmap({ s, upd }) {
   const [activeSeg, setActiveSeg] = useState("semilla");
-  const [votingName, setVotingName] = useState("");
+  const [teamName, setTeamName] = useState("");
   const [newVotoTitulo, setNewVotoTitulo] = useState("");
   const [newVotoCategoria, setNewVotoCategoria] = useState("journey");
   const [commentInputs, setCommentInputs] = useState({});
+  const [expandedStep, setExpandedStep] = useState(null); // "semilla-2"
 
-  const updJourneyStep = (seg, idx, field, val) =>
+  const updStep = (seg, idx, field, val) =>
     upd("journey", { ...s.journey, [seg]: s.journey[seg].map((e, i) => i === idx ? { ...e, [field]: val } : e) });
 
   const updSprint = (idx, field, val) =>
     upd("sprints", s.sprints.map((e, i) => i === idx ? { ...e, [field]: val } : e));
 
-  const addVote = (id) => {
-    if (!votingName.trim()) return;
-    const name = votingName.trim();
-    upd("votos", s.votos.map(v => v.id !== id ? v : {
-      ...v, upvotes: v.upvotes.includes(name) ? v.upvotes.filter(n => n !== name) : [...v.upvotes, name]
-    }));
+  // Votación en cada paso del journey
+  const voteStep = (seg, idx) => {
+    if (!teamName.trim()) return;
+    const name = teamName.trim();
+    const steps = s.journey[seg].map((e, i) => {
+      if (i !== idx) return e;
+      const ups = e.upvotes || [];
+      return { ...e, upvotes: ups.includes(name) ? ups.filter(n => n !== name) : [...ups, name] };
+    });
+    upd("journey", { ...s.journey, [seg]: steps });
   };
 
-  const addComment = (id) => {
-    const txt = (commentInputs[id] || "").trim();
-    if (!txt || !votingName.trim()) return;
+  const commentStep = (seg, idx, key) => {
+    const txt = (commentInputs[key] || "").trim();
+    if (!txt || !teamName.trim()) return;
+    const steps = s.journey[seg].map((e, i) => i !== idx ? e : {
+      ...e, comentarios: [...(e.comentarios || []), { autor: teamName.trim(), texto: txt, fecha: new Date().toLocaleDateString("es-CO") }]
+    });
+    upd("journey", { ...s.journey, [seg]: steps });
+    setCommentInputs(p => ({ ...p, [key]: "" }));
+  };
+
+  // Votación general
+  const voteItem = (id) => {
+    if (!teamName.trim()) return;
+    const name = teamName.trim();
     upd("votos", s.votos.map(v => v.id !== id ? v : {
-      ...v, comentarios: [...v.comentarios, { autor: votingName.trim(), texto: txt, fecha: new Date().toLocaleDateString("es-CO") }]
+      ...v, upvotes: (v.upvotes||[]).includes(name) ? v.upvotes.filter(n => n !== name) : [...(v.upvotes||[]), name]
+    }));
+  };
+  const commentItem = (id) => {
+    const txt = (commentInputs[id] || "").trim();
+    if (!txt || !teamName.trim()) return;
+    upd("votos", s.votos.map(v => v.id !== id ? v : {
+      ...v, comentarios: [...(v.comentarios||[]), { autor: teamName.trim(), texto: txt, fecha: new Date().toLocaleDateString("es-CO") }]
     }));
     setCommentInputs(p => ({ ...p, [id]: "" }));
   };
-
   const addVoto = () => {
     if (!newVotoTitulo.trim()) return;
-    upd("votos", [...s.votos, { id: Date.now(), titulo: newVotoTitulo.trim(), categoria: newVotoCategoria, upvotes: [], comentarios: [] }]);
+    upd("votos", [...(s.votos||[]), { id: Date.now(), titulo: newVotoTitulo.trim(), categoria: newVotoCategoria, upvotes: [], comentarios: [] }]);
     setNewVotoTitulo("");
   };
 
@@ -262,15 +284,12 @@ function JourneyRoadmap({ s, upd }) {
     "Conectar":    { icon: "🔗", border: "#c084fc", bg: "#fdf4ff", text: "#6b21a8" },
     "Crecer":      { icon: "🚀", border: "#fb7185", bg: "#fff1f2", text: "#9f1239" },
   };
-  const SPRINT_STATUS = {
-    "todo":     { bg: "#f3f4f6", color: "#6b7280" },
-    "en-curso": { bg: "#fef9c3", color: "#854d0e" },
-    "hecho":    { bg: "#dcfce7", color: "#166534" },
-  };
-  const CAT_COLORS = { journey: "#3b82f6", pv: "#2d6a4f", sprint: "#5b21b6", whatsapp: "#22c55e" };
-  const CAT_LABELS = { journey: "🗺️ Journey", pv: "🎁 Propuesta Valor", sprint: "⚡ Sprint", whatsapp: "💬 WhatsApp" };
-  const rowLbl = { fontSize:"0.58rem", fontWeight:700, letterSpacing:"1px", textTransform:"uppercase", color:"#7a7265", marginBottom:3 };
-  const ta = (border, minH = 52) => ({ width:"100%", boxSizing:"border-box", background:"#fffef7", border:`1.5px dashed ${border}`, borderRadius:6, padding:"7px 9px", fontFamily:"'DM Sans',sans-serif", fontSize:"0.75rem", color:"#1c1c1c", outline:"none", resize:"vertical", lineHeight:1.5, minHeight: minH });
+  const SPRINT_ST = { todo: { bg:"#f3f4f6", color:"#6b7280" }, "en-curso": { bg:"#fef9c3", color:"#854d0e" }, hecho: { bg:"#dcfce7", color:"#166534" } };
+  const CAT_C = { journey:"#3b82f6", pv:"#2d6a4f", sprint:"#5b21b6", whatsapp:"#22c55e" };
+  const CAT_L = { journey:"🗺️ Journey", pv:"🎁 Propuesta Valor", sprint:"⚡ Sprint", whatsapp:"💬 WhatsApp" };
+  const lbl = { fontSize:"0.56rem", fontWeight:700, letterSpacing:"0.8px", textTransform:"uppercase", color:"#7a7265", marginBottom:2 };
+  const ta = (border, minH = 40) => ({ width:"100%", boxSizing:"border-box", background:"#fffef7", border:`1.5px dashed ${border}`, borderRadius:5, padding:"5px 7px", fontFamily:"'DM Sans',sans-serif", fontSize:"0.72rem", color:"#1c1c1c", outline:"none", resize:"none", lineHeight:1.45, minHeight:minH, overflow:"hidden" });
+  const inp = { width:"100%", boxSizing:"border-box", background:"#fff", border:"1.5px dashed #c8c2b4", borderRadius:5, padding:"5px 8px", fontFamily:"'DM Sans',sans-serif", fontSize:"0.73rem", color:"#1c1c1c", outline:"none" };
 
   const journey = s.journey || INITIAL.journey;
   const sprints = s.sprints || INITIAL.sprints;
@@ -278,195 +297,268 @@ function JourneyRoadmap({ s, upd }) {
   const votos = s.votos || [];
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:32 }}>
+    <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
 
-      {/* HEADER */}
-      <div style={{ background:"linear-gradient(135deg,#0f172a,#1e3a5f)", borderRadius:14, padding:"22px 30px", display:"flex", alignItems:"center", gap:16 }}>
-        <span style={{ fontSize:"2rem" }}>🗺️</span>
-        <div>
-          <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:"1.05rem", color:"#fff", marginBottom:3 }}>Journey + Roadmap de Validación — Piloto T1 Bucaramanga</div>
-          <div style={{ fontSize:"0.72rem", color:"rgba(148,163,184,0.9)", lineHeight:1.4 }}>Customer Journey por segmento · Sprints de validación · Activación WhatsApp · Votación del equipo</div>
+      {/* BARRA SUPERIOR: título + nombre del miembro */}
+      <div style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 16px", background:"#0f172a", borderRadius:10 }}>
+        <span style={{ fontSize:"1.2rem" }}>🗺️</span>
+        <div style={{ flex:1 }}>
+          <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:"0.88rem", color:"#fff" }}>Journey + Roadmap — Piloto T1 Bucaramanga</div>
+          <div style={{ fontSize:"0.62rem", color:"rgba(148,163,184,0.85)" }}>Journey editable · Sprints · WhatsApp · Votación del equipo</div>
+        </div>
+        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+          <div style={{ fontSize:"0.6rem", color:"#94a3b8", fontWeight:700, textTransform:"uppercase" }}>Tu nombre:</div>
+          <input value={teamName} onChange={e=>setTeamName(e.target.value)} placeholder="Escribe tu nombre..."
+            style={{ background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.2)", borderRadius:6, padding:"5px 9px", fontFamily:"'DM Sans',sans-serif", fontSize:"0.72rem", color:"#fff", outline:"none", width:130 }} />
         </div>
       </div>
 
-      {/* ── JOURNEY ── */}
+      {/* ── JOURNEY: layout de filas compactas ── */}
       <div>
-        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
-          <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:"0.92rem", color:"#1c1c1c" }}>🗺️ Customer Journey por Segmento</div>
-          <div style={{ display:"flex", gap:6 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+          <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:"0.82rem", color:"#1c1c1c" }}>🗺️ Customer Journey por Segmento</div>
+          <div style={{ display:"flex", gap:5 }}>
             {[["semilla","🌱 Semilla","#52b788"],["raiz","🌳 Raíz","#b7791f"]].map(([id,label,color]) => (
-              <button key={id} onClick={() => setActiveSeg(id)} style={{ background: activeSeg===id ? color : "transparent", color: activeSeg===id ? "#fff" : color, border:`2px solid ${color}`, padding:"4px 14px", borderRadius:20, fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:"0.7rem", cursor:"pointer" }}>{label}</button>
+              <button key={id} onClick={()=>setActiveSeg(id)} style={{ background:activeSeg===id?color:"transparent", color:activeSeg===id?"#fff":color, border:`2px solid ${color}`, padding:"3px 11px", borderRadius:16, fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:"0.65rem", cursor:"pointer" }}>{label}</button>
             ))}
           </div>
         </div>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(5, 1fr)", gap:10 }}>
+
+        {/* Tabla de pasos: cada fila = un paso */}
+        <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
           {journey[activeSeg].map((step, i) => {
             const m = PASO_META[step.paso] || { icon:"📍", border:"#ccc", bg:"#f9f9f9", text:"#333" };
+            const key = `${activeSeg}-${i}`;
+            const expanded = expandedStep === key;
+            const ups = step.upvotes || [];
+            const coms = step.comentarios || [];
+            const myVote = teamName && ups.includes(teamName.trim());
             return (
-              <div key={i} style={{ background:m.bg, border:`2px solid ${m.border}`, borderRadius:12, padding:"14px 12px", display:"flex", flexDirection:"column", gap:8 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-                  <span style={{ fontSize:"1rem" }}>{m.icon}</span>
-                  <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:"0.7rem", color:m.text, textTransform:"uppercase", letterSpacing:"0.8px", flex:1 }}>{step.paso}</div>
-                  <div style={{ width:20, height:20, borderRadius:"50%", background:m.border, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"0.62rem", fontWeight:800 }}>{i+1}</div>
-                </div>
-                <div><div style={rowLbl}>¿Qué hace?</div><textarea value={step.desc||""} onChange={e=>updJourneyStep(activeSeg,i,"desc",e.target.value)} style={ta(m.border)} /></div>
-                <div><div style={rowLbl}>❌ Dolor</div><textarea value={step.dolor||""} onChange={e=>updJourneyStep(activeSeg,i,"dolor",e.target.value)} style={ta("#fc8181")} /></div>
-                <div><div style={rowLbl}>✅ Ganancia</div><textarea value={step.ganancia||""} onChange={e=>updJourneyStep(activeSeg,i,"ganancia",e.target.value)} style={ta("#52b788")} /></div>
-                <div><div style={rowLbl}>📣 Canal</div><textarea value={step.canal||""} onChange={e=>updJourneyStep(activeSeg,i,"canal",e.target.value)} style={ta(m.border, 36)} /></div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── SPRINTS ROADMAP ── */}
-      <div>
-        <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:"0.92rem", color:"#1c1c1c", marginBottom:14 }}>⚡ Roadmap de Sprints — Validación de la Propuesta de Valor</div>
-        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-          {sprints.map((sp, i) => {
-            const st = SPRINT_STATUS[sp.status] || SPRINT_STATUS["todo"];
-            return (
-              <div key={i} style={{ background:sp.bg, border:`2px solid ${sp.color}33`, borderRadius:12, padding:"16px 20px", display:"grid", gridTemplateColumns:"64px 1fr 200px", gap:18, alignItems:"start" }}>
-                <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
-                  <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:"1.3rem", color:sp.color, lineHeight:1 }}>{sp.num}</div>
-                  <div style={{ fontSize:"0.6rem", color:sp.color, fontWeight:600, textAlign:"center", lineHeight:1.2 }}>{sp.semanas}</div>
-                  <select value={sp.status} onChange={e=>updSprint(i,"status",e.target.value)}
-                    style={{ marginTop:4, background:st.bg, color:st.color, border:`1px solid ${sp.color}55`, borderRadius:6, padding:"2px 5px", fontSize:"0.6rem", fontWeight:700, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", width:"100%" }}>
-                    <option value="todo">⏳ Pendiente</option>
-                    <option value="en-curso">🔥 En curso</option>
-                    <option value="hecho">✅ Hecho</option>
-                  </select>
-                </div>
-                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                  <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:"0.78rem", color:sp.color }}>{sp.titulo}</div>
-                  <div><div style={rowLbl}>Acciones</div>
-                    <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
-                      {sp.acciones.map((acc, j) => (
-                        <div key={j} style={{ display:"flex", gap:5, alignItems:"flex-start" }}>
-                          <span style={{ color:sp.color, fontWeight:800, marginTop:3, fontSize:"0.8rem" }}>›</span>
-                          <textarea value={acc} onChange={e=>updSprint(i,"acciones",sp.acciones.map((a,k)=>k===j?e.target.value:a))} style={{ ...ta(sp.color+"66",28), flex:1 }} />
-                          <button onClick={()=>updSprint(i,"acciones",sp.acciones.filter((_,k)=>k!==j))} style={{ background:"none", border:"none", color:"#bbb", cursor:"pointer", padding:"2px 4px", fontSize:"1rem", lineHeight:1 }}>×</button>
-                        </div>
-                      ))}
-                      <button onClick={()=>updSprint(i,"acciones",[...sp.acciones,""])} style={{ alignSelf:"flex-start", fontSize:"0.63rem", color:sp.color, background:"none", border:`1px dashed ${sp.color}`, borderRadius:5, padding:"2px 7px", cursor:"pointer", marginTop:2 }}>+ Acción</button>
-                    </div>
+              <div key={i} style={{ border:`2px solid ${m.border}44`, borderRadius:10, overflow:"hidden" }}>
+                {/* Fila principal */}
+                <div style={{ background:m.bg, display:"grid", gridTemplateColumns:"56px 1fr 1fr 1fr 100px 60px", gap:0, alignItems:"stretch" }}>
+                  {/* Paso badge */}
+                  <div style={{ background:m.border, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"8px 4px", gap:2 }}>
+                    <span style={{ fontSize:"1rem" }}>{m.icon}</span>
+                    <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:"0.56rem", color:"#fff", textTransform:"uppercase", textAlign:"center", lineHeight:1.1 }}>{step.paso}</div>
+                    <div style={{ width:16, height:16, borderRadius:"50%", background:"rgba(255,255,255,0.3)", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"0.58rem", fontWeight:800, marginTop:2 }}>{i+1}</div>
+                  </div>
+                  {/* ¿Qué hace? */}
+                  <div style={{ padding:"6px 8px", borderRight:`1px solid ${m.border}33` }}>
+                    <div style={lbl}>¿Qué hace?</div>
+                    <textarea value={step.desc||""} onChange={e=>updStep(activeSeg,i,"desc",e.target.value)} style={ta(m.border,36)} />
+                  </div>
+                  {/* Dolor */}
+                  <div style={{ padding:"6px 8px", borderRight:`1px solid ${m.border}33` }}>
+                    <div style={{ ...lbl, color:"#dc2626" }}>❌ Dolor</div>
+                    <textarea value={step.dolor||""} onChange={e=>updStep(activeSeg,i,"dolor",e.target.value)} style={ta("#fc8181",36)} />
+                  </div>
+                  {/* Ganancia */}
+                  <div style={{ padding:"6px 8px", borderRight:`1px solid ${m.border}33` }}>
+                    <div style={{ ...lbl, color:"#166534" }}>✅ Ganancia</div>
+                    <textarea value={step.ganancia||""} onChange={e=>updStep(activeSeg,i,"ganancia",e.target.value)} style={ta("#52b788",36)} />
+                  </div>
+                  {/* Canal */}
+                  <div style={{ padding:"6px 8px", borderRight:`1px solid ${m.border}33` }}>
+                    <div style={lbl}>📣 Canal</div>
+                    <textarea value={step.canal||""} onChange={e=>updStep(activeSeg,i,"canal",e.target.value)} style={ta(m.border,36)} />
+                  </div>
+                  {/* Votos */}
+                  <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:3, padding:"6px 4px" }}>
+                    <button onClick={()=>voteStep(activeSeg,i)}
+                      title={teamName?"Votar por este paso":"Escribe tu nombre primero"}
+                      style={{ background:myVote?m.border:"rgba(0,0,0,0.06)", color:myVote?"#fff":m.text, border:"none", borderRadius:6, padding:"3px 6px", cursor:teamName?"pointer":"not-allowed", display:"flex", flexDirection:"column", alignItems:"center", gap:1 }}>
+                      <span style={{ fontSize:"0.85rem" }}>👍</span>
+                      <span style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:"0.68rem" }}>{ups.length}</span>
+                    </button>
+                    <button onClick={()=>setExpandedStep(expanded?null:key)}
+                      style={{ background:"none", border:`1px solid ${m.border}55`, borderRadius:5, padding:"2px 5px", cursor:"pointer", fontSize:"0.62rem", color:m.text, fontWeight:600 }}>
+                      💬 {coms.length}
+                    </button>
                   </div>
                 </div>
-                <div><div style={rowLbl}>🎯 Meta del sprint</div><textarea value={sp.meta} onChange={e=>updSprint(i,"meta",e.target.value)} style={ta(sp.color, 80)} /></div>
+
+                {/* Panel expandible: votos + comentarios */}
+                {expanded && (
+                  <div style={{ background:"#fafaf7", borderTop:`1px solid ${m.border}33`, padding:"8px 12px", display:"flex", flexDirection:"column", gap:6 }}>
+                    {ups.length > 0 && (
+                      <div style={{ display:"flex", gap:4, flexWrap:"wrap", alignItems:"center" }}>
+                        <span style={{ fontSize:"0.6rem", color:"#7a7265", fontWeight:700, textTransform:"uppercase" }}>Votos:</span>
+                        {ups.map(n=><span key={n} style={{ background:`${m.border}15`, color:m.text, fontSize:"0.6rem", fontWeight:600, padding:"1px 7px", borderRadius:10 }}>{n}</span>)}
+                      </div>
+                    )}
+                    {coms.map((c,ci)=>(
+                      <div key={ci} style={{ background:"#fff", borderRadius:5, padding:"5px 8px", fontSize:"0.68rem", color:"#1c1c1c", lineHeight:1.4, border:`1px solid ${m.border}22` }}>
+                        <span style={{ fontWeight:700, color:m.text }}>{c.autor}</span> <span style={{ color:"#9a9485", fontSize:"0.6rem" }}>· {c.fecha}</span><br/>{c.texto}
+                      </div>
+                    ))}
+                    <div style={{ display:"flex", gap:5 }}>
+                      <input value={commentInputs[key]||""} onChange={e=>setCommentInputs(p=>({...p,[key]:e.target.value}))}
+                        placeholder={teamName?"Tu opinión sobre este paso...":"Escribe tu nombre arriba primero"}
+                        style={{ ...inp, flex:1, fontSize:"0.7rem" }} />
+                      <button onClick={()=>commentStep(activeSeg,i,key)}
+                        style={{ background:m.border, color:"#fff", border:"none", borderRadius:5, padding:"4px 10px", fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:"0.65rem", cursor:teamName?"pointer":"not-allowed" }}>
+                        Comentar
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* ── WHATSAPP ── */}
-      <div style={{ background:"#f0fdf4", border:"2px solid #86efac", borderRadius:14, padding:"20px 24px" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
-          <span style={{ fontSize:"1.5rem" }}>💬</span>
-          <div style={{ flex:1 }}>
-            <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:"0.92rem", color:"#166534" }}>Activación Canal WhatsApp — CultivoRED Bucaramanga T1</div>
-            <div style={{ fontSize:"0.68rem", color:"#4ade80", marginTop:1 }}>Diseñá el onboarding y mensajes clave antes de activar el canal</div>
+      {/* ── SPRINTS + WHATSAPP en dos columnas ── */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 340px", gap:16, alignItems:"start" }}>
+
+        {/* SPRINTS */}
+        <div>
+          <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:"0.82rem", color:"#1c1c1c", marginBottom:8 }}>⚡ Roadmap de Sprints — Validación de la Propuesta de Valor</div>
+          <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+            {sprints.map((sp, i) => {
+              const st = SPRINT_ST[sp.status] || SPRINT_ST.todo;
+              return (
+                <div key={i} style={{ background:sp.bg, border:`2px solid ${sp.color}33`, borderRadius:9, padding:"10px 14px", display:"grid", gridTemplateColumns:"52px 1fr 160px", gap:12, alignItems:"start" }}>
+                  <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:2 }}>
+                    <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:"1.1rem", color:sp.color, lineHeight:1 }}>{sp.num}</div>
+                    <div style={{ fontSize:"0.56rem", color:sp.color, fontWeight:600, textAlign:"center" }}>{sp.semanas}</div>
+                    <select value={sp.status} onChange={e=>updSprint(i,"status",e.target.value)}
+                      style={{ marginTop:3, background:st.bg, color:st.color, border:`1px solid ${sp.color}44`, borderRadius:5, padding:"2px 4px", fontSize:"0.58rem", fontWeight:700, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", width:"100%" }}>
+                      <option value="todo">⏳ Pendiente</option>
+                      <option value="en-curso">🔥 En curso</option>
+                      <option value="hecho">✅ Hecho</option>
+                    </select>
+                  </div>
+                  <div>
+                    <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:"0.72rem", color:sp.color, marginBottom:4 }}>{sp.titulo}</div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+                      {sp.acciones.map((acc,j)=>(
+                        <div key={j} style={{ display:"flex", gap:4, alignItems:"flex-start" }}>
+                          <span style={{ color:sp.color, fontWeight:800, marginTop:2, fontSize:"0.75rem" }}>›</span>
+                          <textarea value={acc} onChange={e=>updSprint(i,"acciones",sp.acciones.map((a,k)=>k===j?e.target.value:a))} style={{ ...ta(sp.color+"66",24), flex:1 }} />
+                          <button onClick={()=>updSprint(i,"acciones",sp.acciones.filter((_,k)=>k!==j))} style={{ background:"none", border:"none", color:"#bbb", cursor:"pointer", padding:"1px 3px", fontSize:"0.9rem" }}>×</button>
+                        </div>
+                      ))}
+                      <button onClick={()=>updSprint(i,"acciones",[...sp.acciones,""])} style={{ alignSelf:"flex-start", fontSize:"0.6rem", color:sp.color, background:"none", border:`1px dashed ${sp.color}`, borderRadius:4, padding:"1px 6px", cursor:"pointer" }}>+ Acción</button>
+                    </div>
+                  </div>
+                  <div>
+                    <div style={lbl}>🎯 Meta</div>
+                    <textarea value={sp.meta} onChange={e=>updSprint(i,"meta",e.target.value)} style={ta(sp.color,56)} />
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <select value={wap.statusCanal||"pendiente"} onChange={e=>upd("whatsapp",{...wap,statusCanal:e.target.value})}
-            style={{ background: wap.statusCanal==="activo"?"#dcfce7":wap.statusCanal==="pausado"?"#fef9c3":"#f3f4f6", color: wap.statusCanal==="activo"?"#166534":wap.statusCanal==="pausado"?"#854d0e":"#6b7280", border:"2px solid #86efac", borderRadius:8, padding:"5px 10px", fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:"0.72rem", cursor:"pointer" }}>
-            <option value="pendiente">⏳ Pendiente de activar</option>
-            <option value="activo">✅ Canal activo</option>
-            <option value="pausado">⏸️ Pausado</option>
-          </select>
         </div>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+
+        {/* WHATSAPP */}
+        <div style={{ background:"#f0fdf4", border:"2px solid #86efac", borderRadius:10, padding:"14px 16px", display:"flex", flexDirection:"column", gap:10 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+            <span style={{ fontSize:"1.2rem" }}>💬</span>
+            <div style={{ flex:1 }}>
+              <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:"0.82rem", color:"#166534" }}>Activación WhatsApp</div>
+              <div style={{ fontSize:"0.62rem", color:"#4ade80" }}>CultivoRED Bucaramanga T1</div>
+            </div>
+            <select value={wap.statusCanal||"pendiente"} onChange={e=>upd("whatsapp",{...wap,statusCanal:e.target.value})}
+              style={{ background:wap.statusCanal==="activo"?"#dcfce7":wap.statusCanal==="pausado"?"#fef9c3":"#f3f4f6", color:wap.statusCanal==="activo"?"#166534":wap.statusCanal==="pausado"?"#854d0e":"#6b7280", border:"1.5px solid #86efac", borderRadius:6, padding:"3px 7px", fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:"0.62rem", cursor:"pointer" }}>
+              <option value="pendiente">⏳ Pendiente</option>
+              <option value="activo">✅ Activo</option>
+              <option value="pausado">⏸️ Pausado</option>
+            </select>
+          </div>
           <div>
-            <div style={rowLbl}>📱 Nombre de la comunidad</div>
+            <div style={lbl}>📱 Nombre comunidad</div>
             <input value={wap.nombreComunidad||""} onChange={e=>upd("whatsapp",{...wap,nombreComunidad:e.target.value})} placeholder="Ej. CultivoRED Bucaramanga 🌱"
-              style={{ width:"100%", boxSizing:"border-box", background:"#fff", border:"1.5px dashed #86efac", borderRadius:6, padding:"7px 9px", fontFamily:"'DM Sans',sans-serif", fontSize:"0.78rem", color:"#1c1c1c", outline:"none" }} />
-            <div style={{ marginTop:12 }}><div style={rowLbl}>📋 Checklist de activación</div>
-              <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
-                {[["Número WhatsApp Business configurado","checkNumero"],["Perfil CultivoRED con foto y descripción","checkPerfil"],["Mensaje de bienvenida probado con Juli AI","checkBienvenida"],["Primer mensaje de expectativa listo","checkExpectativa"],["Primeros 10 emprendedores invitados","checkInvitados"]].map(([label,key]) => (
-                  <label key={key} style={{ display:"flex", alignItems:"center", gap:7, cursor:"pointer", fontSize:"0.72rem", color:"#1c1c1c" }}>
-                    <input type="checkbox" checked={!!(wap[key])} onChange={e=>upd("whatsapp",{...wap,[key]:e.target.checked})} style={{ width:13, height:13, accentColor:"#22c55e", cursor:"pointer" }} />
-                    {label}
-                  </label>
-                ))}
-              </div>
+              style={{ ...inp, fontSize:"0.72rem" }} />
+          </div>
+          <div>
+            <div style={lbl}>📋 Checklist de activación</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+              {[["Número WhatsApp Business configurado","checkNumero"],["Perfil CultivoRED con foto y descripción","checkPerfil"],["Mensaje de activación redactado y aprobado","checkActivacion"],["Mensaje de expectativa listo para enviar","checkExpectativa"],["Primeros 10 emprendedores invitados al piloto","checkInvitados"]].map(([label,key])=>(
+                <label key={key} style={{ display:"flex", alignItems:"center", gap:6, cursor:"pointer", fontSize:"0.7rem", color:"#1c1c1c" }}>
+                  <input type="checkbox" checked={!!(wap[key])} onChange={e=>upd("whatsapp",{...wap,[key]:e.target.checked})} style={{ width:13, height:13, accentColor:"#22c55e", cursor:"pointer" }} />
+                  {label}
+                </label>
+              ))}
             </div>
           </div>
-          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-            <div><div style={rowLbl}>👋 Mensaje de bienvenida (Juli AI)</div><textarea value={wap.mensajeBienvenida||""} onChange={e=>upd("whatsapp",{...wap,mensajeBienvenida:e.target.value})} style={ta("#22c55e",88)} /></div>
-            <div><div style={rowLbl}>🔥 Mensaje de expectativa (pre-lanzamiento)</div><textarea value={wap.mensajeExpectativa||""} onChange={e=>upd("whatsapp",{...wap,mensajeExpectativa:e.target.value})} style={ta("#f6ad55",88)} /></div>
-            <div><div style={rowLbl}>📝 Notas del equipo sobre el canal</div><textarea value={wap.notas||""} onChange={e=>upd("whatsapp",{...wap,notas:e.target.value})} placeholder="Decisiones, ideas, aprendizajes..." style={ta("#86efac",52)} /></div>
+          <div>
+            <div style={lbl}>🚀 Mensaje de activación para la comunidad</div>
+            <textarea value={wap.mensajeActivacion||""} onChange={e=>upd("whatsapp",{...wap,mensajeActivacion:e.target.value})} style={ta("#22c55e",72)} />
+          </div>
+          <div>
+            <div style={lbl}>🔥 Mensaje de expectativa (pre-lanzamiento)</div>
+            <textarea value={wap.mensajeExpectativa||""} onChange={e=>upd("whatsapp",{...wap,mensajeExpectativa:e.target.value})} style={ta("#f6ad55",60)} />
+          </div>
+          <div>
+            <div style={lbl}>📝 Notas del equipo</div>
+            <textarea value={wap.notas||""} onChange={e=>upd("whatsapp",{...wap,notas:e.target.value})} placeholder="Decisiones, ideas, aprendizajes del equipo..." style={ta("#86efac",44)} />
           </div>
         </div>
       </div>
 
-      {/* ── VOTACIÓN ── */}
-      <div>
-        <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16, flexWrap:"wrap" }}>
+      {/* ── VOTACIÓN GENERAL ── */}
+      <div style={{ border:"2px solid #e5e0d5", borderRadius:10, padding:"14px 16px" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12, flexWrap:"wrap" }}>
           <div style={{ flex:1 }}>
-            <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:"0.92rem", color:"#1c1c1c" }}>🗳️ Votación del Equipo — ¿Qué es lo más valioso?</div>
-            <div style={{ fontSize:"0.68rem", color:"#9a9485", marginTop:2 }}>Proponé ideas, votá las que creés más importantes y dejá tu opinión</div>
+            <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:"0.82rem", color:"#1c1c1c" }}>🗳️ Votación del Equipo — ¿Qué es lo más valioso?</div>
+            <div style={{ fontSize:"0.62rem", color:"#9a9485", marginTop:1 }}>Propón ideas, vota las que crees más importantes y deja tu opinión. Usa tu nombre de arriba.</div>
           </div>
-          <div style={{ display:"flex", alignItems:"center", gap:7 }}>
-            <div style={{ fontSize:"0.63rem", color:"#7a7265", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.5px" }}>Tu nombre:</div>
-            <input value={votingName} onChange={e=>setVotingName(e.target.value)} placeholder="Escribí tu nombre..."
-              style={{ background:"#fff", border:"1.5px solid #e5e0d5", borderRadius:6, padding:"5px 10px", fontFamily:"'DM Sans',sans-serif", fontSize:"0.75rem", color:"#1c1c1c", outline:"none", width:140 }} />
-          </div>
-        </div>
-
-        {/* Add new item */}
-        <div style={{ background:"#faf8f2", border:"1.5px dashed #c8c2b4", borderRadius:10, padding:"14px 16px", marginBottom:16, display:"grid", gridTemplateColumns:"1fr auto auto", gap:10, alignItems:"end" }}>
-          <div>
-            <div style={rowLbl}>➕ Nueva propuesta a votar</div>
-            <input value={newVotoTitulo} onChange={e=>setNewVotoTitulo(e.target.value)} placeholder="¿Qué propuesta querés sumar?"
-              style={{ width:"100%", boxSizing:"border-box", background:"#fff", border:"1.5px dashed #c8c2b4", borderRadius:6, padding:"7px 10px", fontFamily:"'DM Sans',sans-serif", fontSize:"0.78rem", color:"#1c1c1c", outline:"none" }} />
-          </div>
-          <div>
-            <div style={rowLbl}>Categoría</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr auto auto", gap:7, alignItems:"end", minWidth:380 }}>
+            <div>
+              <div style={lbl}>Nueva propuesta a votar</div>
+              <input value={newVotoTitulo} onChange={e=>setNewVotoTitulo(e.target.value)} placeholder="¿Qué propuesta quieres sumar?"
+                style={{ ...inp, fontSize:"0.72rem" }} />
+            </div>
             <select value={newVotoCategoria} onChange={e=>setNewVotoCategoria(e.target.value)}
-              style={{ background:"#fff", border:"1.5px dashed #c8c2b4", borderRadius:6, padding:"7px 10px", fontFamily:"'DM Sans',sans-serif", fontSize:"0.78rem", color:"#1c1c1c", outline:"none", cursor:"pointer" }}>
+              style={{ background:"#fff", border:"1.5px dashed #c8c2b4", borderRadius:5, padding:"5px 7px", fontFamily:"'DM Sans',sans-serif", fontSize:"0.7rem", color:"#1c1c1c", outline:"none", cursor:"pointer" }}>
               <option value="journey">🗺️ Journey</option>
-              <option value="pv">🎁 Propuesta Valor</option>
+              <option value="pv">🎁 PV</option>
               <option value="sprint">⚡ Sprint</option>
               <option value="whatsapp">💬 WhatsApp</option>
             </select>
+            <button onClick={addVoto} style={{ background:"#2d6a4f", color:"#fff", border:"none", borderRadius:7, padding:"6px 13px", fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:"0.68rem", cursor:"pointer" }}>Agregar</button>
           </div>
-          <button onClick={addVoto} style={{ background:"#2d6a4f", color:"#fff", border:"none", borderRadius:8, padding:"8px 16px", fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:"0.72rem", cursor:"pointer" }}>Agregar</button>
         </div>
 
-        {/* Voting cards */}
         {votos.length === 0 ? (
-          <div style={{ textAlign:"center", padding:"28px", color:"#c8c2b4", fontSize:"0.78rem" }}>Aún no hay propuestas. Sé el primero en agregar una 👆</div>
+          <div style={{ textAlign:"center", padding:"20px", color:"#c8c2b4", fontSize:"0.75rem" }}>Aún no hay propuestas. ¡Sé el primero en agregar una! 👆</div>
         ) : (
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-            {[...votos].sort((a,b)=>b.upvotes.length-a.upvotes.length).map(voto => {
-              const cc = CAT_COLORS[voto.categoria] || "#6b7280";
-              const hasVoted = votingName && voto.upvotes.includes(votingName.trim());
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:10 }}>
+            {[...votos].sort((a,b)=>(b.upvotes||[]).length-(a.upvotes||[]).length).map(voto => {
+              const cc = CAT_C[voto.categoria] || "#6b7280";
+              const hasVoted = teamName && (voto.upvotes||[]).includes(teamName.trim());
               return (
-                <div key={voto.id} style={{ background:"#fff", border:`2px solid ${hasVoted ? cc : "#e5e0d5"}`, borderRadius:12, padding:"14px 16px", display:"flex", flexDirection:"column", gap:8 }}>
-                  <div style={{ display:"flex", alignItems:"flex-start", gap:8 }}>
+                <div key={voto.id} style={{ background:"#fff", border:`2px solid ${hasVoted?cc:"#e5e0d5"}`, borderRadius:9, padding:"10px 12px", display:"flex", flexDirection:"column", gap:7 }}>
+                  <div style={{ display:"flex", alignItems:"flex-start", gap:7 }}>
                     <div style={{ flex:1 }}>
-                      <div style={{ display:"inline-block", background:`${cc}15`, color:cc, fontSize:"0.57rem", fontWeight:700, letterSpacing:"1px", textTransform:"uppercase", padding:"2px 7px", borderRadius:10, marginBottom:4 }}>{CAT_LABELS[voto.categoria]}</div>
-                      <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:"0.8rem", color:"#1c1c1c", lineHeight:1.3 }}>{voto.titulo}</div>
+                      <div style={{ display:"inline-block", background:`${cc}15`, color:cc, fontSize:"0.55rem", fontWeight:700, letterSpacing:"0.8px", textTransform:"uppercase", padding:"2px 6px", borderRadius:8, marginBottom:3 }}>{CAT_L[voto.categoria]}</div>
+                      <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:"0.75rem", color:"#1c1c1c", lineHeight:1.3 }}>{voto.titulo}</div>
                     </div>
-                    <button onClick={()=>addVote(voto.id)} style={{ display:"flex", flexDirection:"column", alignItems:"center", background:hasVoted?cc:"#f5f5f0", color:hasVoted?"#fff":"#6b6459", border:"none", borderRadius:8, padding:"5px 9px", cursor:votingName?"pointer":"not-allowed", minWidth:40, gap:0 }}>
-                      <span style={{ fontSize:"0.9rem" }}>👍</span>
-                      <span style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:"0.78rem" }}>{voto.upvotes.length}</span>
+                    <button onClick={()=>voteItem(voto.id)} title={teamName?"Votar":"Escribe tu nombre primero"}
+                      style={{ display:"flex", flexDirection:"column", alignItems:"center", background:hasVoted?cc:"#f5f5f0", color:hasVoted?"#fff":"#6b6459", border:"none", borderRadius:7, padding:"4px 7px", cursor:teamName?"pointer":"not-allowed", minWidth:34 }}>
+                      <span style={{ fontSize:"0.8rem" }}>👍</span>
+                      <span style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:"0.72rem" }}>{(voto.upvotes||[]).length}</span>
                     </button>
                   </div>
-                  {voto.upvotes.length > 0 && (
-                    <div style={{ display:"flex", flexWrap:"wrap", gap:4 }}>
-                      {voto.upvotes.map(n => <span key={n} style={{ background:`${cc}15`, color:cc, fontSize:"0.6rem", fontWeight:600, padding:"2px 7px", borderRadius:10 }}>{n}</span>)}
+                  {(voto.upvotes||[]).length > 0 && (
+                    <div style={{ display:"flex", flexWrap:"wrap", gap:3 }}>
+                      {voto.upvotes.map(n=><span key={n} style={{ background:`${cc}15`, color:cc, fontSize:"0.58rem", fontWeight:600, padding:"1px 6px", borderRadius:8 }}>{n}</span>)}
                     </div>
                   )}
-                  <div style={{ borderTop:"1px solid #f0ede5", paddingTop:7, display:"flex", flexDirection:"column", gap:4 }}>
-                    {voto.comentarios.map((c,ci) => (
-                      <div key={ci} style={{ background:"#faf8f2", borderRadius:6, padding:"5px 9px", fontSize:"0.7rem", color:"#1c1c1c", lineHeight:1.4 }}>
-                        <span style={{ fontWeight:700, color:cc }}>{c.autor}</span> <span style={{ color:"#9a9485", fontSize:"0.62rem" }}>· {c.fecha}</span><br/>{c.texto}
+                  <div style={{ borderTop:"1px solid #f0ede5", paddingTop:6, display:"flex", flexDirection:"column", gap:4 }}>
+                    {(voto.comentarios||[]).map((c,ci)=>(
+                      <div key={ci} style={{ background:"#faf8f2", borderRadius:5, padding:"4px 7px", fontSize:"0.67rem", color:"#1c1c1c", lineHeight:1.4 }}>
+                        <span style={{ fontWeight:700, color:cc }}>{c.autor}</span> <span style={{ color:"#9a9485", fontSize:"0.58rem" }}>· {c.fecha}</span><br/>{c.texto}
                       </div>
                     ))}
-                    <div style={{ display:"flex", gap:5, marginTop:2 }}>
-                      <input value={commentInputs[voto.id]||""} onChange={e=>setCommentInputs(p=>({...p,[voto.id]:e.target.value}))} placeholder={votingName?"Tu opinión...":"Escribí tu nombre arriba primero"}
-                        style={{ flex:1, background:"#faf8f2", border:"1px dashed #c8c2b4", borderRadius:5, padding:"4px 8px", fontFamily:"'DM Sans',sans-serif", fontSize:"0.7rem", color:"#1c1c1c", outline:"none" }} />
-                      <button onClick={()=>addComment(voto.id)} style={{ background:cc, color:"#fff", border:"none", borderRadius:5, padding:"4px 10px", fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:"0.68rem", cursor:votingName?"pointer":"not-allowed" }}>Opinar</button>
+                    <div style={{ display:"flex", gap:4 }}>
+                      <input value={commentInputs[voto.id]||""} onChange={e=>setCommentInputs(p=>({...p,[voto.id]:e.target.value}))}
+                        placeholder={teamName?"Tu opinión...":"Escribe tu nombre arriba"}
+                        style={{ ...inp, flex:1, fontSize:"0.67rem" }} />
+                      <button onClick={()=>commentItem(voto.id)} style={{ background:cc, color:"#fff", border:"none", borderRadius:5, padding:"3px 8px", fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:"0.62rem", cursor:teamName?"pointer":"not-allowed" }}>Opinar</button>
                     </div>
                   </div>
                 </div>
@@ -486,12 +578,12 @@ const INITIAL = {
   replicador: "",
   semanasPiloto: "8 semanas",
   accionesValidar: "",
-  pvSemillaDeclaracion: "CultivoRED es tu primer paso para vender directamente. Desde WhatsApp, con Juli AI y acompañamiento del Líder Territorial, construís tu perfil, encontrás compradores y generás ingresos reales en 8 semanas — sin salir de tu territorio ni necesitar ser experto en tecnología.",
+  pvSemillaDeclaracion: "CultivoRED es tu primer paso para vender directamente. Desde WhatsApp, con acompañamiento del Líder Territorial, construyes tu perfil, encuentras compradores y generas ingresos reales en 8 semanas — sin salir de tu territorio ni necesitar ser experto en tecnología.",
   pvSemillaJob: "Quiero vender lo que produzco sin depender de intermediarios, pero no sé cómo ni por dónde empezar sin que me estafen o me pierda.",
-  pvSemillaPromesa: "Después de 8 semanas tenés: perfil digital activo, al menos 1 contacto comprador real y claridad de precio justo para tu producto.",
-  pvRaizDeclaracion: "CultivoRED te conecta directamente con hipermercados, empresas y agencias. Con el Sello de Origen y precio justo negociado por el Nodo Territorial, escalás tus ventas con clientes recurrentes — sin intermediarios que se queden con tu ganancia.",
+  pvSemillaPromesa: "Después de 8 semanas tienes: perfil digital activo, al menos 1 contacto comprador real y claridad del precio justo para tu producto.",
+  pvRaizDeclaracion: "CultivoRED te conecta directamente con hipermercados, empresas y agencias. Con el Sello de Origen y precio justo negociado por el Nodo Territorial, escalas tus ventas con clientes recurrentes — sin intermediarios que se queden con tu ganancia.",
   pvRaizJob: "Yo ya sé producir y vender, pero mis ingresos dependen de la temporada y no tengo cómo llegar a compradores más grandes sin que alguien se quede con la ganancia.",
-  pvRaizPromesa: "Después de 8 semanas tenés: al menos 1 acuerdo activo con un comprador verificado, precio justo documentado y visibilidad en la red CultivoRED.",
+  pvRaizPromesa: "Después de 8 semanas tienes: al menos 1 acuerdo activo con un comprador verificado, precio justo documentado y visibilidad en la red CultivoRED.",
   hips: [
     { enunciado: "Podemos definir y mapear el 'journey' de cada cliente (Descubrir → Registrarse → Validar → Conectar → Crecer) para entender sus dolores y expectativas reales.", valida: "Taller UX + Mapa de empatía", indicador: "Journey Map documentado" },
     { enunciado: "Podemos definir una propuesta de valor clara y diferenciada para cada segmento (Ej: Semilla vs Raíz) que resuelva problemas específicos en su etapa actual.", valida: "Value Proposition Canvas", indicador: "Propuestas de valor consolidadas" },
@@ -553,23 +645,23 @@ const INITIAL = {
   },
   journey: {
     semilla: [
-      { paso: "Descubrir",   desc: "Conoce CultivoRED por boca a boca del Líder Territorial o en un evento de su comunidad.", dolor: "No sabe que existe una alternativa real al intermediario.", ganancia: "Ve que otros productores como él ya están vendiendo directo.", canal: "Boca a boca + Líder Territorial" },
-      { paso: "Registrarse", desc: "Se registra por WhatsApp con ayuda de Juli AI en un proceso simple desde su celular.", dolor: "Desconfianza y poca experiencia con apps o plataformas digitales.", ganancia: "Proceso en su idioma, sin descargar nada, acompañado.", canal: "WhatsApp + Juli AI" },
-      { paso: "Validar",     desc: "Sube su primer producto con descripción y precio justo orientado por Juli AI.", dolor: "No sabe cuánto vale realmente lo que produce.", ganancia: "Precio de referencia del mercado + Sello de Origen asignado.", canal: "Juli AI + Líder Territorial" },
-      { paso: "Conectar",    desc: "Recibe su primer contacto de comprador real verificado por la red CultivoRED.", dolor: "Miedo a que no le compren o a que lo estafen.", ganancia: "Comprador verificado por la red, acompañado en el proceso.", canal: "Red CultivoRED" },
-      { paso: "Crecer",      desc: "Completa su segunda venta y tiene perfil activo con historial.", dolor: "Ingresos irregulares, sin red de apoyo ni historial.", ganancia: "Historial de ventas visible + comunidad de pares activa.", canal: "Plataforma CultivoRED" },
+      { paso: "Descubrir",   desc: "Conoce CultivoRED por boca a boca del Líder Territorial o en un evento de la comunidad.", dolor: "No sabe que existe una alternativa real al intermediario.", ganancia: "Ve que otros productores como él ya están vendiendo directo.", canal: "Boca a boca + Líder Territorial", upvotes: [], comentarios: [] },
+      { paso: "Registrarse", desc: "Se registra por WhatsApp en un proceso simple desde su celular, con acompañamiento del equipo.", dolor: "Desconfianza y poca experiencia con apps o plataformas digitales.", ganancia: "Proceso en su idioma, sin descargar nada, acompañado paso a paso.", canal: "WhatsApp + Líder Territorial", upvotes: [], comentarios: [] },
+      { paso: "Validar",     desc: "Sube su primer producto con descripción y precio justo orientado por el equipo.", dolor: "No sabe cuánto vale realmente lo que produce.", ganancia: "Precio de referencia del mercado + Sello de Origen asignado.", canal: "Líder Territorial + Red CultivoRED", upvotes: [], comentarios: [] },
+      { paso: "Conectar",    desc: "Recibe su primer contacto de comprador real verificado por la red CultivoRED.", dolor: "Miedo a que no le compren o a que lo estafen.", ganancia: "Comprador verificado por la red, acompañado en todo el proceso.", canal: "Red CultivoRED", upvotes: [], comentarios: [] },
+      { paso: "Crecer",      desc: "Completa su segunda venta y tiene perfil activo con historial.", dolor: "Ingresos irregulares, sin red de apoyo ni historial.", ganancia: "Historial de ventas visible + comunidad de pares activa.", canal: "Plataforma CultivoRED", upvotes: [], comentarios: [] },
     ],
     raiz: [
-      { paso: "Descubrir",   desc: "Descubre el Nodo Territorial en un evento o por referido de otro emprendedor con negocio.", dolor: "Siente que su techo es el mercado local o la temporada.", ganancia: "Ve que la red conecta con hipermercados y empresas recurrentes.", canal: "Eventos + Nodo Territorial" },
-      { paso: "Registrarse", desc: "Activa su perfil avanzado con historial de producción y capacidad de oferta.", dolor: "No tiene cómo demostrar formalmente su capacidad productiva.", ganancia: "Perfil verificado con historial + Sello de Origen documentado.", canal: "WhatsApp + Plataforma" },
-      { paso: "Validar",     desc: "Precio justo negociado y documentado por el Nodo Territorial con benchmark formal.", dolor: "Siempre vende por debajo del precio real de mercado.", ganancia: "Precio justo con referencia de mercado formal y documentado.", canal: "Nodo Territorial + Juli AI" },
-      { paso: "Conectar",    desc: "Cierra su primer acuerdo formal con un comprador verificado de la red.", dolor: "No tiene acceso directo a hipermercados o empresas grandes.", ganancia: "Acuerdo formal, recurrente y sin intermediarios que se queden con su ganancia.", canal: "Red CultivoRED" },
-      { paso: "Crecer",      desc: "Tiene cliente recurrente y escala su oferta con apoyo del Nodo.", dolor: "No puede crecer sin apoyo técnico, financiero o logístico.", ganancia: "Red de pares + apoyo del Nodo para escalar producción.", canal: "Plataforma CultivoRED + Nodo" },
+      { paso: "Descubrir",   desc: "Descubre el Nodo Territorial en un evento o por referido de otro emprendedor con negocio.", dolor: "Siente que su techo es el mercado local o la temporada.", ganancia: "Ve que la red conecta con hipermercados y empresas recurrentes.", canal: "Eventos + Nodo Territorial", upvotes: [], comentarios: [] },
+      { paso: "Registrarse", desc: "Activa su perfil avanzado con historial de producción y capacidad de oferta.", dolor: "No tiene cómo demostrar formalmente su capacidad productiva.", ganancia: "Perfil verificado con historial + Sello de Origen documentado.", canal: "WhatsApp + Plataforma", upvotes: [], comentarios: [] },
+      { paso: "Validar",     desc: "Precio justo negociado y documentado por el Nodo Territorial con benchmark formal.", dolor: "Siempre vende por debajo del precio real de mercado.", ganancia: "Precio justo con referencia de mercado formal y documentado.", canal: "Nodo Territorial + Equipo", upvotes: [], comentarios: [] },
+      { paso: "Conectar",    desc: "Cierra su primer acuerdo formal con un comprador verificado de la red.", dolor: "No tiene acceso directo a hipermercados o empresas grandes.", ganancia: "Acuerdo formal, recurrente y sin intermediarios que se queden con su ganancia.", canal: "Red CultivoRED", upvotes: [], comentarios: [] },
+      { paso: "Crecer",      desc: "Tiene cliente recurrente y escala su oferta con apoyo del Nodo.", dolor: "No puede crecer sin apoyo técnico, financiero o logístico.", ganancia: "Red de pares + apoyo del Nodo para escalar producción.", canal: "Plataforma CultivoRED + Nodo", upvotes: [], comentarios: [] },
     ],
   },
   sprints: [
-    { num: "S1", semanas: "Sem 1–2", titulo: "DISEÑO DE EXPERIENCIA", color: "#5b21b6", bg: "#f5f3ff", acciones: ["Taller UX: mapear journey Semilla y Raíz con equipo", "Definir PV por segmento (Value Proposition Canvas)", "Co-diseñar flujo de onboarding en WhatsApp con Juli AI"], meta: "Journey Map documentado + PV validado por el equipo", status: "en-curso" },
-    { num: "S2", semanas: "Sem 2–3", titulo: "PROTOTIPO CANAL WHATSAPP", color: "#0369a1", bg: "#f0f9ff", acciones: ["Configurar comunidad WhatsApp CultivoRED Bucaramanga", "Diseñar flujo de bienvenida con Juli AI", "Redactar primer mensaje de expectativa al canal"], meta: "Canal activo + 10 emprendedores invitados al piloto", status: "pendiente" },
+    { num: "S1", semanas: "Sem 1–2", titulo: "DISEÑO DE EXPERIENCIA", color: "#5b21b6", bg: "#f5f3ff", acciones: ["Taller UX: mapear journey Semilla y Raíz con el equipo", "Definir la propuesta de valor por segmento (Value Proposition Canvas)", "Diseñar el flujo de activación en WhatsApp para la comunidad existente"], meta: "Journey Map documentado + PV validado por el equipo", status: "en-curso" },
+    { num: "S2", semanas: "Sem 2–3", titulo: "ACTIVACIÓN CANAL WHATSAPP", color: "#0369a1", bg: "#f0f9ff", acciones: ["Configurar la comunidad WhatsApp CultivoRED Bucaramanga", "Redactar y aprobar el mensaje de activación con la propuesta de valor", "Enviar el mensaje de activación a la comunidad existente e invitar primeros 10"], meta: "Canal activo + 10 emprendedores respondiendo al piloto", status: "pendiente" },
     { num: "S3", semanas: "Sem 3–4", titulo: "VALIDACIÓN DE PITCH", color: "#92400e", bg: "#fffbeb", acciones: ["Pitch de PV Semilla con 3 emprendedores reales", "Pitch de PV Raíz con 3 emprendedores con negocio", "Ajustar propuesta según feedback directo"], meta: "Al menos 4/6 emprendedores dicen 'esto me sirve'", status: "pendiente" },
     { num: "S4", semanas: "Sem 4–6", titulo: "CAPTACIÓN Y PRIMER NODO", color: "#065f46", bg: "#ecfdf5", acciones: ["Activar estrategia de expectativa en WhatsApp", "Primer evento presencial en Nodo Territorial", "Registrar primeros 5 emprendedores piloto"], meta: "5 emprendedores registrados + 1 Nodo activo", status: "pendiente" },
     { num: "S5", semanas: "Sem 6–8", titulo: "PRIMERA TRANSACCIÓN", color: "#9d174d", bg: "#fdf2f8", acciones: ["Conectar al menos 1 emprendedor con comprador verificado", "Documentar precio justo de al menos 3 productos", "Generar primer reporte de validación del piloto T1"], meta: "1 transacción real + reporte de aprendizajes T1", status: "pendiente" },
@@ -577,9 +669,9 @@ const INITIAL = {
   whatsapp: {
     statusCanal: "pendiente",
     nombreComunidad: "CultivoRED Bucaramanga T1 🌱",
-    mensajeBienvenida: "¡Bienvenido/a a CultivoRED! 🌱 Soy Juli AI, tu asistente en este camino. Acá vas a encontrar apoyo para vender lo que producís directamente, sin intermediarios. ¿Cómo te llamás y qué producís en tu territorio?",
-    mensajeExpectativa: "Algo grande está por llegar a tu territorio. CultivoRED conecta emprendedores rurales con compradores reales — sin intermediarios. ¿Querés ser de los primeros? Respondé con tu nombre y lo que producís 🌿",
-    checkNumero: false, checkPerfil: false, checkBienvenida: false, checkExpectativa: false, checkInvitados: false,
+    mensajeActivacion: "¡Hola comunidad CultivoRED! 🌱 Tenemos una propuesta para ti. CultivoRED te conecta directamente con compradores reales para que vendas lo que produces sin intermediarios y a precio justo. Si quieres saber cómo funciona y ser parte del piloto en tu territorio, responde este mensaje con tu nombre y qué produces.",
+    mensajeExpectativa: "Algo grande está por llegar a tu territorio. CultivoRED conecta emprendedores rurales con compradores reales — sin intermediarios y a precio justo. ¿Quieres ser de los primeros? Responde con tu nombre y lo que produces 🌿",
+    checkNumero: false, checkPerfil: false, checkActivacion: false, checkExpectativa: false, checkInvitados: false,
     notas: "",
   },
   votos: [],
