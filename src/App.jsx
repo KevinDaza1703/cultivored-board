@@ -122,6 +122,102 @@ function ColorCardList({ list = [], setList, placeholder }) {
   );
 }
 
+function PVSegmentos({ s, upd }) {
+  const dolorRow = (txt, color) => (
+    <div style={{ display:"flex", alignItems:"flex-start", gap:8, padding:"7px 10px", borderRadius:7, background:`${color}12`, borderLeft:`3px solid ${color}`, fontSize:"0.76rem", color:"#1c1c1c", lineHeight:1.45 }}>
+      <span style={{ color, fontWeight:800, flexShrink:0, marginTop:1 }}>✓</span>{txt}
+    </div>
+  );
+  const rowLabel = { fontSize:"0.58rem", fontWeight:700, letterSpacing:"1px", textTransform:"uppercase", color:"#7a7265", marginBottom:4 };
+  const ta = (borderColor, color = "#1c1c1c", minH = 72) => ({
+    width:"100%", boxSizing:"border-box", background:"#fffef7",
+    border:`1.5px dashed ${borderColor}`, borderRadius:6, padding:"8px 10px",
+    fontFamily:"'DM Sans',sans-serif", fontSize:"0.8rem", color,
+    outline:"none", minHeight:minH, lineHeight:1.55, resize:"vertical",
+  });
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:18, marginBottom:32 }}>
+      <div style={{ background:"linear-gradient(135deg,#1a4731,#2d6a4f)", borderRadius:12, padding:"18px 24px", display:"flex", alignItems:"center", gap:14 }}>
+        <span style={{ fontSize:"1.8rem" }}>🎯</span>
+        <div>
+          <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:"1rem", color:"#fff", marginBottom:3 }}>Propuestas de Valor por Segmento — Piloto Bucaramanga T1</div>
+          <div style={{ fontSize:"0.73rem", color:"rgba(149,213,178,0.85)", lineHeight:1.4 }}>Encaje entre lo que necesita el emprendedor rural y lo que CultivoRED ofrece. Editá los campos directamente.</div>
+        </div>
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
+
+        {/* SEMILLA */}
+        <div style={{ background:"#f0faf5", borderRadius:14, border:"2px solid #b7e4c7", padding:"22px 24px", display:"flex", flexDirection:"column", gap:14 }}>
+          <div>
+            <div style={{ display:"inline-flex", alignItems:"center", gap:6, background:"#52b788", color:"#fff", fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:"0.72rem", letterSpacing:"1.5px", textTransform:"uppercase", padding:"5px 14px", borderRadius:20, marginBottom:4 }}>🌱 Semilla</div>
+            <div style={{ fontSize:"0.7rem", color:"#2d6a4f", fontWeight:500, marginTop:2 }}>Emprendedor rural que apenas empieza</div>
+          </div>
+          <div>
+            <div style={rowLabel}>💬 Job to be done</div>
+            <div style={{ background:"#fffbeb", border:"1px dashed #f6ad55", borderRadius:8, padding:"10px 12px", fontSize:"0.77rem", color:"#92400e", lineHeight:1.55, fontStyle:"italic" }}>"{s.pvSemillaJob}"</div>
+          </div>
+          <div>
+            <div style={rowLabel}>🎁 Declaración de propuesta de valor</div>
+            <textarea value={s.pvSemillaDeclaracion || ""} onChange={e => upd("pvSemillaDeclaracion", e.target.value)} placeholder="✏️ Declaración PV Semilla..." style={ta("#52b788")} />
+          </div>
+          <div>
+            <div style={rowLabel}>❌ Dolores que resuelve → cómo</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+              {dolorRow("No sabe usar herramientas digitales → Todo por WhatsApp + Juli AI con lenguaje sencillo", "#52b788")}
+              {dolorRow("Desconfianza institucional → Acompañamiento humano del Líder Territorial en campo", "#52b788")}
+              {dolorRow("Sin marca ni diferenciación → Sello de Origen + perfil digital en 1 sesión", "#52b788")}
+              {dolorRow("No sabe a quién venderle → Red CultivoRED conecta su oferta con compradores verificados", "#52b788")}
+            </div>
+          </div>
+          <div>
+            <div style={rowLabel}>✅ Ganancia concreta al terminar las 8 semanas</div>
+            <div style={{ background:"#d8f3dc", borderRadius:8, padding:"2px 4px", border:"1px solid #74c69d" }}>
+              <textarea value={s.pvSemillaPromesa || ""} onChange={e => upd("pvSemillaPromesa", e.target.value)} placeholder="✏️ ¿Qué tiene el emprendedor al terminar?" style={{ ...ta("transparent","#1b4332",52), background:"transparent", border:"none" }} />
+            </div>
+          </div>
+        </div>
+
+        {/* RAÍZ */}
+        <div style={{ background:"#fffbf0", borderRadius:14, border:"2px solid #f6d860", padding:"22px 24px", display:"flex", flexDirection:"column", gap:14 }}>
+          <div>
+            <div style={{ display:"inline-flex", alignItems:"center", gap:6, background:"#b7791f", color:"#fff", fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:"0.72rem", letterSpacing:"1.5px", textTransform:"uppercase", padding:"5px 14px", borderRadius:20, marginBottom:4 }}>🌳 Raíz</div>
+            <div style={{ fontSize:"0.7rem", color:"#92400e", fontWeight:500, marginTop:2 }}>Emprendedor rural con negocio ya funcionando</div>
+          </div>
+          <div>
+            <div style={rowLabel}>💬 Job to be done</div>
+            <div style={{ background:"#fffbeb", border:"1px dashed #f6ad55", borderRadius:8, padding:"10px 12px", fontSize:"0.77rem", color:"#92400e", lineHeight:1.55, fontStyle:"italic" }}>"{s.pvRaizJob}"</div>
+          </div>
+          <div>
+            <div style={rowLabel}>🎁 Declaración de propuesta de valor</div>
+            <textarea value={s.pvRaizDeclaracion || ""} onChange={e => upd("pvRaizDeclaracion", e.target.value)} placeholder="✏️ Declaración PV Raíz..." style={ta("#b7791f")} />
+          </div>
+          <div>
+            <div style={rowLabel}>❌ Dolores que resuelve → cómo</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+              {dolorRow("Ingresos inestables por temporada → Clientes recurrentes vía red CultivoRED", "#b7791f")}
+              {dolorRow("Dependencia de intermediarios → Venta directa con precio justo negociado por el Nodo Territorial", "#b7791f")}
+              {dolorRow("Productos sin diferenciación → Sello de Origen + historia del producto (branding de origen)", "#b7791f")}
+              {dolorRow("Sin acceso a mercados grandes → Alianzas activas con compradores verificados en la red", "#b7791f")}
+            </div>
+          </div>
+          <div>
+            <div style={rowLabel}>✅ Ganancia concreta al terminar las 8 semanas</div>
+            <div style={{ background:"#fef3c7", borderRadius:8, padding:"2px 4px", border:"1px solid #f6ad55" }}>
+              <textarea value={s.pvRaizPromesa || ""} onChange={e => upd("pvRaizPromesa", e.target.value)} placeholder="✏️ ¿Qué tiene el emprendedor al terminar?" style={{ ...ta("transparent","#92400e",52), background:"transparent", border:"none" }} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+        <div style={{ flex:1, height:1, background:"#ede9e0" }} />
+        <span style={{ fontSize:"0.62rem", fontWeight:700, letterSpacing:"1.5px", textTransform:"uppercase", color:"#9a9485", whiteSpace:"nowrap" }}>Value Proposition Canvas — Detalle completo</span>
+        <div style={{ flex:1, height:1, background:"#ede9e0" }} />
+      </div>
+    </div>
+  );
+}
+
 // ─── ESTADO INICIAL ───────────────────────────────────────────────────────────
 const INITIAL = {
   nodoTerritorial: "",
@@ -129,6 +225,12 @@ const INITIAL = {
   replicador: "",
   semanasPiloto: "8 semanas",
   accionesValidar: "",
+  pvSemillaDeclaracion: "CultivoRED es tu primer paso para vender directamente. Desde WhatsApp, con Juli AI y acompañamiento del Líder Territorial, construís tu perfil, encontrás compradores y generás ingresos reales en 8 semanas — sin salir de tu territorio ni necesitar ser experto en tecnología.",
+  pvSemillaJob: "Quiero vender lo que produzco sin depender de intermediarios, pero no sé cómo ni por dónde empezar sin que me estafen o me pierda.",
+  pvSemillaPromesa: "Después de 8 semanas tenés: perfil digital activo, al menos 1 contacto comprador real y claridad de precio justo para tu producto.",
+  pvRaizDeclaracion: "CultivoRED te conecta directamente con hipermercados, empresas y agencias. Con el Sello de Origen y precio justo negociado por el Nodo Territorial, escalás tus ventas con clientes recurrentes — sin intermediarios que se queden con tu ganancia.",
+  pvRaizJob: "Yo ya sé producir y vender, pero mis ingresos dependen de la temporada y no tengo cómo llegar a compradores más grandes sin que alguien se quede con la ganancia.",
+  pvRaizPromesa: "Después de 8 semanas tenés: al menos 1 acuerdo activo con un comprador verificado, precio justo documentado y visibilidad en la red CultivoRED.",
   hips: [
     { enunciado: "Podemos definir y mapear el 'journey' de cada cliente (Descubrir → Registrarse → Validar → Conectar → Crecer) para entender sus dolores y expectativas reales.", valida: "Taller UX + Mapa de empatía", indicador: "Journey Map documentado" },
     { enunciado: "Podemos definir una propuesta de valor clara y diferenciada para cada segmento (Ej: Semilla vs Raíz) que resuelva problemas específicos en su etapa actual.", valida: "Value Proposition Canvas", indicador: "Propuestas de valor consolidadas" },
@@ -509,6 +611,7 @@ export default function CultivoRED() {
         {/* ══ PESTAÑA 3: VALUE PROPOSITION CANVAS ══ */}
         {activeTab === "valueProp" && (
           <div style={{ background: "#fff", borderRadius: 14, padding: 30, boxShadow: "0 2px 20px rgba(0,0,0,0.06)" }}>
+            <PVSegmentos s={s} upd={upd} />
             <div style={{ textAlign: "center", marginBottom: 30 }}>
               <h2 style={{ fontFamily: "'Syne',sans-serif", margin: 0, color: "#1c1c1c", fontSize: "1.8rem" }}>Value Proposition Canvas</h2>
               <p style={{ color: "#6b6459", fontSize: "0.85rem", margin: "5px 0 0" }}>El encaje entre lo que el cliente necesita y lo que CultivoRED ofrece.</p>
